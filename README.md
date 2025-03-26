@@ -55,16 +55,25 @@ Para configurar o ambiente, siga os passos abaixo:
 
 1. **Subir o container Docker**:
    - Certifique-se de que o Docker está instalado e em execução.
+   - Se esta é a primeira execução ou você deseja recriar o ambiente do zero, remova o volume existente:
+     ```bash
+     docker-compose down -v
+     ```
    - Navegue até o diretório do projeto e execute:
      ```bash
      docker-compose up -d
      ```
 
-2. **Acessar o banco de dados**:
+2. **Inicialização Automática**:
+   - Na primeira execução, o banco de dados será automaticamente criado e configurado.
+   - Os scripts são executados na seguinte ordem:
+     1. `ddl.sql`: Cria a estrutura do banco de dados, tabelas, procedures e triggers
+     2. `dml.sql`: Insere os dados de exemplo e executa operações de teste
+
+3. **Acessar o banco de dados**:
    - Após o container estar em execução, você pode se conectar no DB utilizando o usuário `root`. Como o ambiente está configurado com `MYSQL_ALLOW_EMPTY_PASSWORD=yes`, não é necessário senha.
 
-3. **Executar os scripts manualmente**:
-   - Após acessar o banco de dados, execute os scripts `ddl.sql` e `dml.sql` nessa ordem.
+> **Nota**: Os scripts de inicialização (`ddl.sql` e `dml.sql`) só são executados quando o volume do banco de dados está vazio, ou seja, na primeira execução ou após remover o volume com `docker-compose down -v`.
 
 
 ## Desafios no Controle de Consumo em Banco de Dados
