@@ -3,32 +3,30 @@
 ## Technology Stack
 
 ### Core Technologies
-- .NET Core 9.0
+- .NET 9.0
 - MySQL Database
-- RabbitMQ
-- Docker/Docker Compose
+- Entity Framework Core
+- OpenAPI/Swagger
 
 ### Framework & Libraries
-- MediatR for CQRS
+- Entity Framework Core 9.0.3
+- Pomelo.EntityFrameworkCore.MySql 9.0.0-preview.1
+- Swashbuckle.AspNetCore for OpenAPI
 - FluentValidation
-- Entity Framework Core
-- MassTransit
-- xUnit & Moq
+- MediatR (pending implementation)
 
 ### Development Setup
 ```bash
-# Start infrastructure
-docker-compose up -d
+# Database connection
+Server=localhost
+Database=nsdocs_consumption
+User=root
+Password=root
 
-# Database initialization
-# Automatically runs:
-# 1. ddl.sql - Creates schema and objects
-# 2. dml.sql - Inserts sample data
-
-# RabbitMQ
-# Available at localhost:15672
-# Default credentials: guest/guest
-# Queue name: nsdocs-documents
+# API
+http://localhost:5030
+API Documentation: /docs
+Health Check: /health
 ```
 
 ## Project Configuration

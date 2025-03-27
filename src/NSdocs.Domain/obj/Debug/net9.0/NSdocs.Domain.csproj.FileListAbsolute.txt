@@ -1,0 +1,12 @@
+/Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Domain/bin/Debug/net9.0/NSdocs.Domain.deps.json
+/Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Domain/bin/Debug/net9.0/NSdocs.Domain.dll
+/Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Domain/bin/Debug/net9.0/NSdocs.Domain.pdb
+/Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Domain/obj/Debug/net9.0/NSdocs.Domain.GeneratedMSBuildEditorConfig.editorconfig
+/Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Domain/obj/Debug/net9.0/NSdocs.Domain.AssemblyInfoInputs.cache
+/Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Domain/obj/Debug/net9.0/NSdocs.Domain.AssemblyInfo.cs
+/Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Domain/obj/Debug/net9.0/NSdocs.Domain.csproj.CoreCompileInputs.cache
+/Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Domain/obj/Debug/net9.0/NSdocs.Domain.sourcelink.json
+/Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Domain/obj/Debug/net9.0/NSdocs.Domain.dll
+/Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Domain/obj/Debug/net9.0/refint/NSdocs.Domain.dll
+/Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Domain/obj/Debug/net9.0/NSdocs.Domain.pdb
+/Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Domain/obj/Debug/net9.0/ref/NSdocs.Domain.dll
