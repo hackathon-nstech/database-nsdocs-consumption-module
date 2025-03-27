@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using NSdocs.Application.Common.Interfaces;
 using NSdocs.Application.Documents.Events;
+using NSdocs.Infrastructure.Configuration;
 using NSdocs.Infrastructure.Data;
 using NSdocs.Infrastructure.Services;
 
@@ -21,14 +22,18 @@ public static class DependencyInjection
         services.AddScoped<IApplicationDbContext>(provider =>
             provider.GetRequiredService<ApplicationDbContext>());
             
-        // Configure RabbitMQ options
-        services.Configure<RabbitMQOptions>(configuration.GetSection("RabbitMQ"));
+        // Configure Redis options
+        services.Configure<RedisSettings>(configuration.GetSection("Redis"));
         
-        // Configure MassTransit
-        ConfigureMassTransit(services, configuration);
+        // Register Redis services
+        services.AddSingleton<IRedisConnectionFactory, RedisConnectionFactory>();
+        services.AddScoped<IEventPublisher, RedisEventPublisher>();
         
-        // Register event publisher
-        services.AddScoped<IEventPublisher, RabbitMQEventPublisher>();
+        // Configure RabbitMQ options (keeping for now during transition)
+        // services.Configure<RabbitMQOptions>(configuration.GetSection("RabbitMQ"));
+        
+        // // Configure MassTransit (keeping for now during transition)
+        // ConfigureMassTransit(services, configuration);
 
         return services;
     }

@@ -1,165 +1,94 @@
 # Active Context: NSdocs Document Consumption Module
 
 ## Current Focus
-Replacing MySQL triggers with event-driven architecture using RabbitMQ
+Converting MySQL triggers to Redis-based event aggregation with correct consumption tracking
 
-## Recent Changes
-1. **Infrastructure Setup**
-   - Created solution structure with clean architecture
-   - Implemented domain models and enums
-   - Configured Entity Framework Core
+## Implementation Updates
 
-2. **Database Integration**
-   - Set up MySQL connection
-   - Created entity configurations
-   - Implemented generic enum converter
+### Phase 1: RabbitMQ Cleanup
+1. **Remove RabbitMQ Dependencies**
+   - Delete NSdocs.Worker project
+   - Remove MassTransit packages from Infrastructure
+   - Remove RabbitMQ service from docker-compose.yml
+   - Clean up RabbitMQ configuration from appsettings.json
 
-3. **API Layer**
-   - Configured minimal API endpoints
-   - Set up Swagger UI at /docs
-   - Added health check endpoint
+2. **Code Cleanup**
+   - Remove RabbitMQEventPublisher
+   - Delete RabbitMQ configurations
+   - Update dependency injection configuration
 
-4. **CQRS Implementation**
-   - Implemented Create, Read, Update, Delete commands
-   - Added command handlers with proper validation
-   - Set up RESTful API endpoints for all operations
+### Phase 2: Consumption Logic Correction
+1. **Redis Key Structure Update**
+```
+agg:company:{company_id}:{date}:{origin}:{type}:{status}:quantity
+agg:company:{company_id}:{date}:{origin}:{type}:{status}:total
+```
 
-5. **Event-Driven Architecture**
-   - Created document event classes
-   - Implemented event publishing in command handlers
-   - Created worker service project structure
-   - Implemented RabbitMQ integration with MassTransit
+2. **Event Publishing Changes**
+   - Track full document context
+   - Partition by request date
+   - Handle status changes correctly
+   - Apply proper total increment rules
 
-6. **Docker Setup**
-   - Added RabbitMQ to docker-compose.yml
-   - Configured connection settings in appsettings.json
-   - Set up networking between services
+3. **Flusher Service Updates**
+   - Group updates by unique key components
+   - Implement correct total field logic
+   - Handle date partitioning
+   - Add database consistency checks
 
-## Implementation Progress
+### Phase 3: Data Consistency
+1. **Total Field Logic**
+```sql
+total = total + if(quantity > 0, 1, 0)
+```
+- Only increment total on quantity increases
+- Maintain total on quantity decreases
+- Group by unique key components
 
-### Completed Tasks
-1. **Architecture Setup**
-   - Clean architecture project structure
-   - Separation of concerns
-   - Dependency injection organization
+2. **Date Partitioning**
+```sql
+WHERE request_date >= consumption_date
+  AND request_date < date_add(consumption_date, interval 1 day)
+```
+- Implement date-based grouping
+- Handle date boundaries correctly
 
-2. **Domain Layer**
-   - Document entity
-   - Consumption entity
-   - Enum definitions
-   - Value object mapping
+3. **Unique Key Handling**
+```sql
+(id_company, consumption_date, origin, document_type, status)
+```
+- Ensure all components are considered
+- Handle concurrent updates properly
+- Maintain data integrity
 
-3. **Infrastructure Layer**
-   - ApplicationDbContext configuration
-   - Entity type configurations
-   - Generic enum converter
-   - Event publisher implementations
-
-4. **API Layer**
-   - Complete CRUD endpoints
-   - OpenAPI documentation
-   - Health monitoring
-
-5. **CQRS Pattern**
-   - Command/Query separation
-   - MediatR integration
-   - FluentValidation for requests
-
-6. **Event Publishing**
-   - Document event classes
-   - Event publishing in command handlers
-   - In-memory event publisher
-   - RabbitMQ event publisher (placeholder)
-
-7. **Database Migration**
-   - Script to drop triggers
-   - Kept stored procedure for reference
-
-8. **Worker Service**
-   - Project structure
-   - MassTransit consumers for each event type
-   - Configuration for RabbitMQ
-
-9. **Docker Environment**
-   - RabbitMQ container configuration
-   - Network setup
-   - Connection settings in applications
-
-### Active Decisions
-
-1. **Event-Driven Architecture**
-   - Publish events for document changes
-   - Process events asynchronously
-   - Update consumption in worker service
-   - Decouple document and consumption operations
-
-2. **Data Mapping Strategy**
-   - Use generic converter for all enums
-   - Consistent kebab-case database values
-   - Strongly-typed entity configurations
-
-3. **API Design**
-   - Minimal API approach
-   - Endpoint grouping
-   - Clear documentation
-   - RESTful conventions
-
-4. **Command Handling**
-   - Boolean return for update/delete operations
-   - Appropriate HTTP status codes
-   - Validation before processing
-   - Event publishing after successful operations
-
-5. **Docker Configuration**
-   - Containerized RabbitMQ
-   - Shared network for services
-   - Consistent connection settings
-
-### Next Steps
+## Action Items
 
 1. **Immediate Tasks**
-   - Complete RabbitMQ integration with actual message publishing
-   - Complete worker service implementation
-   - Add integration tests for event processing
+   - Remove RabbitMQ components
+   - Implement new Redis key structure
+   - Update event publishing logic
 
-2. **Upcoming Features**
-   - Consumption tracking endpoints
-   - Performance optimization
-   - Monitoring and logging
+2. **Technical Updates**
+   - Enhance Flusher service
+   - Implement date partitioning
+   - Add data consistency checks
 
-3. **Technical Improvements**
-   - Error handling for event processing
-   - Retry mechanisms for failed events
-   - Dead letter handling
-
-## Key Considerations
-
-### Current Focus Areas
-1. Event-driven architecture
-2. Asynchronous processing
-3. Data consistency
-4. Scalability
-5. Reliability
-
-### Monitoring Points
-1. Event publishing success rate
-2. Event processing time
-3. Consumption data accuracy
-4. System throughput
-5. Error handling effectiveness
+3. **Testing & Validation**
+   - Verify total calculation logic
+   - Test date boundary cases
+   - Validate unique key constraints
 
 ## Success Criteria
 
-### Technical Goals
-- Successful replacement of triggers
-- Reliable event processing
-- Accurate consumption data
-- Improved scalability
-- Better error handling
+### Technical Validation
+- Accurate consumption tracking
+- Correct total field updates
+- Proper date partitioning
+- Data consistency maintenance
+- Scalable event processing
 
-### Business Goals
-- Reliable document tracking
-- Accurate consumption data
-- Easy maintenance
-- Scalable solution
-- Improved performance
+### Business Requirements
+- Match original trigger logic
+- Maintain data accuracy
+- Support concurrent operations
+- Enable system scalability

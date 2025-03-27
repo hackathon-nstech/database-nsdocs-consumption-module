@@ -64,3 +64,5 @@
 /Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.API/bin/Debug/net9.0/MassTransit.dll
 /Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.API/bin/Debug/net9.0/MassTransit.Abstractions.dll
 /Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.API/bin/Debug/net9.0/MassTransit.RabbitMqTransport.dll
+/Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.API/bin/Debug/net9.0/Pipelines.Sockets.Unofficial.dll
+/Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.API/bin/Debug/net9.0/StackExchange.Redis.dll
