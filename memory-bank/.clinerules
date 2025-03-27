@@ -104,34 +104,37 @@
    public class DocumentDeletedEvent : DocumentEventBase { }
    ```
 
-3. **Worker Processing**
+3. **Worker Processing with MassTransit**
    ```csharp
-   // Consumer pattern
-   public class DocumentEventConsumer : BackgroundService
+   // MassTransit Consumer pattern
+   public class DocumentCreatedConsumer : IConsumer<DocumentCreatedEvent>
    {
-       protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+       private readonly ILogger<DocumentCreatedConsumer> _logger;
+       private readonly IApplicationDbContext _context;
+
+       public async Task Consume(ConsumeContext<DocumentCreatedEvent> context)
        {
-           // Subscribe to events and process them
-       }
-       
-       private Task HandleDocumentCreatedEvent(DocumentCreatedEvent @event)
-       {
-           // Update consumption for created document
-           return Task.CompletedTask;
-       }
-       
-       private Task HandleDocumentUpdatedEvent(DocumentUpdatedEvent @event)
-       {
-           // Update consumption for updated document
-           return Task.CompletedTask;
-       }
-       
-       private Task HandleDocumentDeletedEvent(DocumentDeletedEvent @event)
-       {
-           // Update consumption for deleted document
-           return Task.CompletedTask;
+           var @event = context.Message;
+           
+           // Get or create consumption record for the month
+           var consumptionDate = new DateTime(@event.RequestDate.Year, @event.RequestDate.Month, 1);
+           
+           var consumption = await _context.Consumptions
+               .FirstOrDefaultAsync(c => 
+                   c.CompanyId == @event.CompanyId &&
+                   c.ConsumptionDate == consumptionDate &&
+                   c.Origin == @event.Origin &&
+                   c.DocumentType == @event.DocumentType &&
+                   c.Status == @event.Status);
+           
+           // Update consumption logic
+           // ...
+           
+           await _context.SaveChangesAsync(context.CancellationToken);
        }
    }
+   
+   // Similar consumers for DocumentUpdatedEvent and DocumentDeletedEvent
    ```
 
 ## Implementation Guidelines
@@ -264,16 +267,39 @@ public class InMemoryEventPublisher : IEventPublisher
     }
 }
 
-// RabbitMQ Implementation
+// RabbitMQ Implementation with MassTransit
 public class RabbitMQEventPublisher : IEventPublisher
 {
     private readonly ILogger<RabbitMQEventPublisher> _logger;
+    private readonly IBus _bus;
     private readonly RabbitMQOptions _options;
 
-    public Task PublishAsync<TEvent>(TEvent @event, CancellationToken cancellationToken = default) where TEvent : class
+    public RabbitMQEventPublisher(
+        ILogger<RabbitMQEventPublisher> logger,
+        IBus bus,
+        IOptions<RabbitMQOptions> options)
     {
-        // Publish to RabbitMQ
-        return Task.CompletedTask;
+        _logger = logger;
+        _bus = bus;
+        _options = options.Value;
+    }
+
+    public async Task PublishAsync<TEvent>(TEvent @event, CancellationToken cancellationToken = default) where TEvent : class
+    {
+        try
+        {
+            // Publish message using MassTransit
+            await _bus.Publish(@event, cancellationToken);
+            
+            _logger.LogInformation(
+                "Event published to RabbitMQ using MassTransit: {EventType}", 
+                typeof(TEvent).Name);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to publish event to RabbitMQ");
+            throw;
+        }
     }
 }
 ```

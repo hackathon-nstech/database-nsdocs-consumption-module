@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using NSdocs.Application.Common.Interfaces;
 using NSdocs.Application.Documents.Events;
 using NSdocs.Domain.Entities;
@@ -21,6 +22,20 @@ public class CreateDocumentCommandHandler : IRequestHandler<CreateDocumentComman
 
     public async Task<long> Handle(CreateDocumentCommand request, CancellationToken cancellationToken)
     {
+        // Check if document with same access key and company ID already exists
+        var existingDocument = await _context.Documents
+            .FirstOrDefaultAsync(d => 
+                d.AccessKey == request.AccessKey && 
+                d.CompanyId == request.CompanyId, 
+                cancellationToken);
+        
+        if (existingDocument != null)
+        {
+            // Document already exists, return its ID
+            return existingDocument.Id;
+        }
+        
+        // Create new document
         var document = new Document
         {
             CompanyId = request.CompanyId,

@@ -28,7 +28,7 @@ Replacing MySQL triggers with event-driven architecture using RabbitMQ
    - Created document event classes
    - Implemented event publishing in command handlers
    - Created worker service project structure
-   - Prepared RabbitMQ integration
+   - Implemented RabbitMQ integration with MassTransit
 
 6. **Docker Setup**
    - Added RabbitMQ to docker-compose.yml
@@ -77,7 +77,7 @@ Replacing MySQL triggers with event-driven architecture using RabbitMQ
 
 8. **Worker Service**
    - Project structure
-   - Event consumer placeholder
+   - MassTransit consumers for each event type
    - Configuration for RabbitMQ
 
 9. **Docker Environment**

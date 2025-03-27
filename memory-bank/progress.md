@@ -39,7 +39,7 @@
 
 7. **Worker Service**
    - Project structure created
-   - Event consumer placeholder implemented
+   - MassTransit consumers implemented for each event type
    - Configuration for RabbitMQ prepared
 
 8. **Docker Setup**
@@ -139,15 +139,15 @@
   - [x] Set up placeholder publisher
   - Success: Basic RabbitMQ configuration in place
 
-- [ ] Complete RabbitMQ Integration
-  - [ ] Implement actual message publishing
-  - [ ] Set up message consumers
+- [x] Complete RabbitMQ Integration
+  - [x] Implement actual message publishing with MassTransit
+  - [x] Set up message consumers
   - Success: RabbitMQ properly configured
 
-- [ ] Worker Implementation
-  - [ ] Event consumers
-  - [ ] Consumption update logic
-  - [ ] Error handling
+- [x] Worker Implementation
+  - [x] Event consumers for document events
+  - [x] Consumption update logic
+  - [x] Error handling
   - Success: Worker processes events correctly
 
 - [ ] Integration Tests

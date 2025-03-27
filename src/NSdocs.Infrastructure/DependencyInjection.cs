@@ -1,7 +1,9 @@
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using NSdocs.Application.Common.Interfaces;
+using NSdocs.Application.Documents.Events;
 using NSdocs.Infrastructure.Data;
 using NSdocs.Infrastructure.Services;
 
@@ -22,10 +24,36 @@ public static class DependencyInjection
         // Configure RabbitMQ options
         services.Configure<RabbitMQOptions>(configuration.GetSection("RabbitMQ"));
         
+        // Configure MassTransit
+        ConfigureMassTransit(services, configuration);
+        
         // Register event publisher
-        // Using RabbitMQEventPublisher instead of InMemoryEventPublisher
         services.AddScoped<IEventPublisher, RabbitMQEventPublisher>();
 
         return services;
+    }
+    
+    private static void ConfigureMassTransit(IServiceCollection services, IConfiguration configuration)
+    {
+        var rabbitMqConfig = configuration.GetSection("RabbitMQ");
+        
+        services.AddMassTransit(x =>
+        {
+            // Register document event consumers
+            x.SetKebabCaseEndpointNameFormatter();
+            
+            // Configure RabbitMQ
+            x.UsingRabbitMq((context, cfg) =>
+            {
+                cfg.Host(rabbitMqConfig["Host"], h =>
+                {
+                    h.Username(rabbitMqConfig["Username"]);
+                    h.Password(rabbitMqConfig["Password"]);
+                });
+                
+                // Configure message topology
+                cfg.ConfigureEndpoints(context);
+            });
+        });
     }
 }

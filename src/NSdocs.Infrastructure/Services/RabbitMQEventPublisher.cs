@@ -1,4 +1,4 @@
-using System.Text.Json;
+using MassTransit;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NSdocs.Application.Common.Interfaces;
@@ -6,39 +6,46 @@ using NSdocs.Application.Common.Interfaces;
 namespace NSdocs.Infrastructure.Services;
 
 /// <summary>
-/// RabbitMQ implementation of the event publisher.
-/// This is a simplified version that logs the events but doesn't actually publish to RabbitMQ yet.
-/// The actual RabbitMQ integration will be implemented in the next phase.
+/// RabbitMQ implementation of the event publisher using MassTransit.
+/// Publishes events to RabbitMQ for asynchronous processing.
 /// </summary>
 public class RabbitMQEventPublisher : IEventPublisher
 {
     private readonly ILogger<RabbitMQEventPublisher> _logger;
+    private readonly IBus _bus;
     private readonly RabbitMQOptions _options;
 
     public RabbitMQEventPublisher(
         ILogger<RabbitMQEventPublisher> logger,
+        IBus bus,
         IOptions<RabbitMQOptions> options)
     {
         _logger = logger;
+        _bus = bus;
         _options = options.Value;
         
-        _logger.LogInformation("RabbitMQ publisher initialized with host: {Host}, queue: {QueueName}", 
-            _options.Host, _options.QueueName);
+        _logger.LogInformation("MassTransit RabbitMQ publisher initialized with queue: {QueueName}", 
+            _options.QueueName);
     }
 
-    public Task PublishAsync<TEvent>(TEvent @event, CancellationToken cancellationToken = default) where TEvent : class
+    public async Task PublishAsync<TEvent>(TEvent @event, CancellationToken cancellationToken = default) where TEvent : class
     {
-        var eventType = typeof(TEvent).Name;
-        var message = JsonSerializer.Serialize(@event);
-        
-        _logger.LogInformation(
-            "Event published to RabbitMQ (simulated): {EventType} - Queue: {QueueName} - Message: {Message}", 
-            eventType, _options.QueueName, message);
-        
-        // TODO: Implement actual RabbitMQ publishing in the next phase
-        // This will require adding the RabbitMQ.Client package and implementing the connection logic
-        
-        return Task.CompletedTask;
+        try
+        {
+            var eventType = typeof(TEvent).Name;
+            
+            // Publish message using MassTransit
+            await _bus.Publish(@event, cancellationToken);
+            
+            _logger.LogInformation(
+                "Event published to RabbitMQ using MassTransit: {EventType}", 
+                eventType);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to publish event to RabbitMQ");
+            throw;
+        }
     }
 }
 

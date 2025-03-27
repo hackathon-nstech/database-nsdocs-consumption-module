@@ -65,3 +65,8 @@
 /Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Worker/obj/Debug/net9.0/ref/NSdocs.Worker.dll
 /Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Worker/bin/Debug/net9.0/RabbitMQ.Client.dll
 /Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Worker/bin/Debug/net9.0/System.Threading.RateLimiting.dll
+/Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Worker/bin/Debug/net9.0/MassTransit.dll
+/Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Worker/bin/Debug/net9.0/MassTransit.Abstractions.dll
+/Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Worker/bin/Debug/net9.0/MassTransit.RabbitMqTransport.dll
+/Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Worker/bin/Debug/net9.0/Microsoft.Extensions.Diagnostics.HealthChecks.dll
+/Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Worker/bin/Debug/net9.0/Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions.dll
