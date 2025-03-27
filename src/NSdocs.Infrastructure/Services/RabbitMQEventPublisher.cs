@@ -1,9 +1,15 @@
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NSdocs.Application.Common.Interfaces;
 
 namespace NSdocs.Infrastructure.Services;
 
+/// <summary>
+/// RabbitMQ implementation of the event publisher.
+/// This is a simplified version that logs the events but doesn't actually publish to RabbitMQ yet.
+/// The actual RabbitMQ integration will be implemented in the next phase.
+/// </summary>
 public class RabbitMQEventPublisher : IEventPublisher
 {
     private readonly ILogger<RabbitMQEventPublisher> _logger;
@@ -15,17 +21,22 @@ public class RabbitMQEventPublisher : IEventPublisher
     {
         _logger = logger;
         _options = options.Value;
+        
+        _logger.LogInformation("RabbitMQ publisher initialized with host: {Host}, queue: {QueueName}", 
+            _options.Host, _options.QueueName);
     }
 
     public Task PublishAsync<TEvent>(TEvent @event, CancellationToken cancellationToken = default) where TEvent : class
     {
-        // This is a placeholder for the actual RabbitMQ implementation
-        // In a real implementation, this would publish the event to RabbitMQ
+        var eventType = typeof(TEvent).Name;
+        var message = JsonSerializer.Serialize(@event);
         
-        _logger.LogInformation("Publishing event to RabbitMQ: {EventType} - {EventData}", 
-            typeof(TEvent).Name, @event);
-            
-        // TODO: Implement RabbitMQ publishing logic
+        _logger.LogInformation(
+            "Event published to RabbitMQ (simulated): {EventType} - Queue: {QueueName} - Message: {Message}", 
+            eventType, _options.QueueName, message);
+        
+        // TODO: Implement actual RabbitMQ publishing in the next phase
+        // This will require adding the RabbitMQ.Client package and implementing the connection logic
         
         return Task.CompletedTask;
     }

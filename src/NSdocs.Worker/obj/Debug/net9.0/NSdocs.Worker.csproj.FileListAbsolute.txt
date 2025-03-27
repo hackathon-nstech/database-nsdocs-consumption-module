@@ -63,3 +63,5 @@
 /Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Worker/obj/Debug/net9.0/NSdocs.Worker.pdb
 /Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Worker/obj/Debug/net9.0/NSdocs.Worker.genruntimeconfig.cache
 /Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Worker/obj/Debug/net9.0/ref/NSdocs.Worker.dll
+/Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Worker/bin/Debug/net9.0/RabbitMQ.Client.dll
+/Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Worker/bin/Debug/net9.0/System.Threading.RateLimiting.dll

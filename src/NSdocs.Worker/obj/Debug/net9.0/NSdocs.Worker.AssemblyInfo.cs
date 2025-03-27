@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("NSdocs.Worker")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+017903851698201852a9139a78a099338c8b0051")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+991724a345c3872e6ee5ed38f2b372b2913d1a8e")]
 [assembly: System.Reflection.AssemblyProductAttribute("NSdocs.Worker")]
 [assembly: System.Reflection.AssemblyTitleAttribute("NSdocs.Worker")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

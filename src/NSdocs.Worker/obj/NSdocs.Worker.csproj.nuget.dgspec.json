@@ -208,6 +208,10 @@
             "Pomelo.EntityFrameworkCore.MySql": {
               "target": "Package",
               "version": "[9.0.0-preview.3.efcore.9.0.0, )"
+            },
+            "RabbitMQ.Client": {
+              "target": "Package",
+              "version": "[7.1.2, )"
             }
           },
           "imports": [

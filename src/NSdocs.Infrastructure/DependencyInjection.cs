@@ -23,11 +23,8 @@ public static class DependencyInjection
         services.Configure<RabbitMQOptions>(configuration.GetSection("RabbitMQ"));
         
         // Register event publisher
-        // Use InMemoryEventPublisher for now, will be replaced with RabbitMQEventPublisher later
-        services.AddScoped<IEventPublisher, InMemoryEventPublisher>();
-        
-        // Uncomment to use RabbitMQ publisher
-        // services.AddScoped<IEventPublisher, RabbitMQEventPublisher>();
+        // Using RabbitMQEventPublisher instead of InMemoryEventPublisher
+        services.AddScoped<IEventPublisher, RabbitMQEventPublisher>();
 
         return services;
     }
