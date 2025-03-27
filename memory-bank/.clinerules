@@ -1,0 +1,185 @@
+# Cline Rules: NSdocs Document Consumption Module
+
+## Implementation Patterns
+
+### Code Organization
+1. **Solution Structure**
+   - Clean separation of projects
+   - Feature-based organization in each layer
+   - Consistent naming conventions
+   - Clear dependency flow
+
+2. **Domain Model Standards**
+   - Strong typing with enums for known values
+   - 44-character access key validation
+   - Proper entity relationships
+   - Value objects when appropriate
+
+3. **CQRS Implementation**
+   - Commands for mutations
+   - Queries for reads
+   - MediatR pipeline behaviors
+   - Validation before handling
+
+4. **Event Design**
+   - Minimal event payloads
+   - EventType enum for action type
+   - Required event properties
+   - Proper event versioning
+
+### Development Guidelines
+1. **Documentation Priority**
+   - Update memory bank before code
+   - Document technical decisions
+   - Track progress per checkpoint
+   - Clear success criteria
+
+2. **Testing Approach**
+   - Test-driven development
+   - Integration tests for events
+   - Performance benchmarks
+   - Checkpoint validation
+
+## Critical Paths
+
+### API Operations
+1. **Document Management**
+   ```
+   POST /api/documents
+   {
+     "accessKey": "44-digit-key",
+     "companyId": 123,
+     "origin": "file|email|ws",
+     "documentType": "nfe|cte|etc",
+     "status": "ok|pending|error|non-existing"
+   }
+   ```
+
+2. **Event Publishing**
+   ```csharp
+   // Event structure
+   DocumentEvent {
+     EventType = Created|Updated|Deleted,
+     CompanyId = 123,
+     RequestDate = utcNow,
+     Origin = File|Email|Ws,
+     DocumentType = Nfe|Cte|etc,
+     Status = Ok|Pending|Error|NonExisting
+   }
+   ```
+
+3. **Worker Processing**
+   ```csharp
+   // Consumer pattern
+   public async Task Consume(ConsumeContext<DocumentEvent> context)
+   {
+     var evt = context.Message;
+     // Update consumption based on event type
+     // No need to query document table
+   }
+   ```
+
+## Implementation Guidelines
+
+### Command Handling
+```csharp
+public class CreateDocumentHandler
+{
+    // Validate command
+    await _validator.ValidateAndThrowAsync(command);
+    
+    // Process command
+    var document = new Document { ... };
+    await _repository.AddAsync(document);
+    
+    // Publish event
+    await _publisher.PublishAsync(new DocumentEvent { ... });
+}
+```
+
+### Database Operations
+```csharp
+// Entity Configuration
+public class DocumentConfiguration : IEntityTypeConfiguration<Document>
+{
+    public void Configure(EntityTypeBuilder<Document> builder)
+    {
+        builder.Property(d => d.AccessKey)
+               .HasMaxLength(44)
+               .IsRequired();
+               
+        builder.Property(d => d.Origin)
+               .HasConversion<string>();
+               
+        // etc...
+    }
+}
+```
+
+### Event Publishing
+```csharp
+// MassTransit Configuration
+services.AddMassTransit(x =>
+{
+    x.UsingRabbitMq((context, cfg) =>
+    {
+        cfg.Host("localhost");
+        cfg.Message<DocumentEvent>(e => 
+            e.SetEntityName("nsdocs-documents"));
+    });
+});
+```
+
+## Project Evolution
+
+### Phase Guidelines
+1. **API Setup**
+   - Focus on core domain models
+   - Basic CRUD operations
+   - Entity configurations
+   - Repository pattern
+
+2. **CQRS Integration**
+   - Command/Query separation
+   - Validation rules
+   - Handler implementation
+   - Unit testing
+
+3. **Event Publishing**
+   - RabbitMQ setup
+   - Event publishing
+   - Error handling
+   - Integration testing
+
+4. **Worker Service**
+   - Consumer setup
+   - Processing logic
+   - Performance tuning
+   - End-to-end testing
+
+## Progress Tracking
+
+### Checkpoint Validation
+1. **API Setup**
+   - Solution builds successfully
+   - Can perform CRUD operations
+   - Entity configurations work
+   - Repository pattern implemented
+
+2. **CQRS & Validation**
+   - Commands handle correctly
+   - Validation rules work
+   - Unit tests pass
+   - Error handling functions
+
+3. **Event Publishing**
+   - Events publish successfully
+   - RabbitMQ receives messages
+   - Integration tests pass
+   - Error handling works
+
+4. **Worker Service**
+   - Consumes events properly
+   - Updates consumption correctly
+   - Handles errors appropriately
+   - Meets performance targets
