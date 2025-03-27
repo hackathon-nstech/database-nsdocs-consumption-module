@@ -1,7 +1,7 @@
 # Active Context: NSdocs Document Consumption Module
 
 ## Current Focus
-Setting up the initial .NET 9.0 API with clean architecture and proper data mapping
+Implementing CRUD operations for documents with CQRS pattern and MediatR
 
 ## Recent Changes
 1. **Infrastructure Setup**
@@ -18,6 +18,11 @@ Setting up the initial .NET 9.0 API with clean architecture and proper data mapp
    - Configured minimal API endpoints
    - Set up Swagger UI at /docs
    - Added health check endpoint
+
+4. **CQRS Implementation**
+   - Implemented Create, Read, Update, Delete commands
+   - Added command handlers with proper validation
+   - Set up RESTful API endpoints for all operations
 
 ## Implementation Progress
 
@@ -38,9 +43,14 @@ Setting up the initial .NET 9.0 API with clean architecture and proper data mapp
    - Generic enum converter
 
 4. **API Layer**
-   - Basic endpoints
+   - Complete CRUD endpoints
    - OpenAPI documentation
    - Health monitoring
+
+5. **CQRS Pattern**
+   - Command/Query separation
+   - MediatR integration
+   - FluentValidation for requests
 
 ### Active Decisions
 
@@ -53,18 +63,24 @@ Setting up the initial .NET 9.0 API with clean architecture and proper data mapp
    - Minimal API approach
    - Endpoint grouping
    - Clear documentation
+   - RESTful conventions
+
+3. **Command Handling**
+   - Boolean return for update/delete operations
+   - Appropriate HTTP status codes
+   - Validation before processing
 
 ### Next Steps
 
 1. **Immediate Tasks**
-   - Implement CQRS pattern with MediatR
-   - Add FluentValidation for request validation
-   - Set up repository pattern
+   - Implement event publishing for document changes
+   - Set up worker service for consumption tracking
+   - Add integration tests for API endpoints
 
 2. **Upcoming Features**
-   - Document registration endpoints
-   - Consumption tracking
+   - Consumption tracking endpoints
    - Database migrations
+   - Performance optimization
 
 3. **Technical Improvements**
    - Error handling middleware
@@ -78,12 +94,14 @@ Setting up the initial .NET 9.0 API with clean architecture and proper data mapp
 2. Data consistency
 3. API documentation
 4. Type safety
+5. Event-driven architecture
 
 ### Monitoring Points
 1. API response times
 2. Database query performance
 3. Error handling effectiveness
 4. Code maintainability
+5. Event processing reliability
 
 ## Success Criteria
 
@@ -92,9 +110,11 @@ Setting up the initial .NET 9.0 API with clean architecture and proper data mapp
 - Type-safe data handling
 - Clear API documentation
 - Efficient database queries
+- Reliable event processing
 
 ### Business Goals
 - Reliable document tracking
 - Accurate consumption data
 - Easy maintenance
 - Scalable solution
+- Improved performance

@@ -30,6 +30,46 @@ public static class DocumentEndpoints
         .Produces<long>(StatusCodes.Status201Created)
         .ProducesValidationProblem();
 
+        app.MapPut("/api/documents/{id}", async (long id, UpdateDocumentCommand command, IMediator mediator) =>
+        {
+            if (id != command.Id)
+            {
+                return Results.BadRequest("ID in URL does not match ID in request body");
+            }
+            
+            var result = await mediator.Send(command);
+            
+            if (!result)
+            {
+                return Results.NotFound();
+            }
+            
+            return Results.NoContent();
+        })
+        .WithName("UpdateDocument")
+        .WithOpenApi()
+        .Produces(StatusCodes.Status204NoContent)
+        .Produces(StatusCodes.Status404NotFound)
+        .Produces(StatusCodes.Status400BadRequest)
+        .ProducesValidationProblem();
+
+        app.MapDelete("/api/documents/{id}", async (long id, IMediator mediator) =>
+        {
+            var command = new DeleteDocumentCommand { Id = id };
+            var result = await mediator.Send(command);
+            
+            if (!result)
+            {
+                return Results.NotFound();
+            }
+            
+            return Results.NoContent();
+        })
+        .WithName("DeleteDocument")
+        .WithOpenApi()
+        .Produces(StatusCodes.Status204NoContent)
+        .Produces(StatusCodes.Status404NotFound);
+
         return app;
     }
 }

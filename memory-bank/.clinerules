@@ -20,6 +20,7 @@
    - Queries for reads
    - MediatR pipeline behaviors
    - Validation before handling
+   - Boolean return for update/delete operations
 
 4. **Event Design**
    - Minimal event payloads
@@ -45,6 +46,7 @@
 ### API Operations
 1. **Document Management**
    ```
+   # Create Document
    POST /api/documents
    {
      "accessKey": "44-digit-key",
@@ -53,6 +55,20 @@
      "documentType": "nfe|cte|etc",
      "status": "ok|pending|error|non-existing"
    }
+   
+   # Update Document
+   PUT /api/documents/{id}
+   {
+     "id": 1,
+     "accessKey": "44-digit-key",
+     "companyId": 123,
+     "origin": "file|email|ws",
+     "documentType": "nfe|cte|etc",
+     "status": "ok|pending|error|non-existing"
+   }
+   
+   # Delete Document
+   DELETE /api/documents/{id}
    ```
 
 2. **Event Publishing**
@@ -83,6 +99,7 @@
 
 ### Command Handling
 ```csharp
+// Create Command Handler
 public class CreateDocumentHandler
 {
     // Validate command
@@ -94,6 +111,35 @@ public class CreateDocumentHandler
     
     // Publish event
     await _publisher.PublishAsync(new DocumentEvent { ... });
+}
+
+// Update Command Handler
+public class UpdateDocumentHandler
+{
+    // Find entity
+    var document = await _context.Documents.FirstOrDefaultAsync(d => d.Id == request.Id);
+    if (document == null) return false;
+    
+    // Update properties
+    document.Property = request.Property;
+    document.UpdatedDate = DateTime.UtcNow;
+    
+    // Save changes
+    await _context.SaveChangesAsync();
+    return true;
+}
+
+// Delete Command Handler
+public class DeleteDocumentHandler
+{
+    // Find entity
+    var document = await _context.Documents.FirstOrDefaultAsync(d => d.Id == request.Id);
+    if (document == null) return false;
+    
+    // Remove entity
+    _context.Documents.Remove(document);
+    await _context.SaveChangesAsync();
+    return true;
 }
 ```
 
@@ -114,6 +160,46 @@ public class DocumentConfiguration : IEntityTypeConfiguration<Document>
         // etc...
     }
 }
+```
+
+### API Endpoint Patterns
+```csharp
+// GET endpoint
+app.MapGet("/api/resource", async (IMediator mediator) =>
+{
+    var result = await mediator.Send(new GetResourceQuery());
+    return Results.Ok(result);
+})
+.WithName("GetResource")
+.WithOpenApi();
+
+// POST endpoint
+app.MapPost("/api/resource", async (CreateResourceCommand command, IMediator mediator) =>
+{
+    var id = await mediator.Send(command);
+    return Results.Created($"/api/resource/{id}", id);
+})
+.WithName("CreateResource")
+.WithOpenApi();
+
+// PUT endpoint
+app.MapPut("/api/resource/{id}", async (int id, UpdateResourceCommand command, IMediator mediator) =>
+{
+    if (id != command.Id) return Results.BadRequest();
+    var result = await mediator.Send(command);
+    return result ? Results.NoContent() : Results.NotFound();
+})
+.WithName("UpdateResource")
+.WithOpenApi();
+
+// DELETE endpoint
+app.MapDelete("/api/resource/{id}", async (int id, IMediator mediator) =>
+{
+    var result = await mediator.Send(new DeleteResourceCommand { Id = id });
+    return result ? Results.NoContent() : Results.NotFound();
+})
+.WithName("DeleteResource")
+.WithOpenApi();
 ```
 
 ### Event Publishing

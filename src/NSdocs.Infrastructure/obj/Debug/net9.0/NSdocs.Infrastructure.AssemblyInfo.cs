@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("NSdocs.Infrastructure")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+bea9839b5cc17645b3be127bbdc3750f61c4327d")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+6a8cc31c7739127e70328b45d0db0ccb77a5c0f0")]
 [assembly: System.Reflection.AssemblyProductAttribute("NSdocs.Infrastructure")]
 [assembly: System.Reflection.AssemblyTitleAttribute("NSdocs.Infrastructure")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
