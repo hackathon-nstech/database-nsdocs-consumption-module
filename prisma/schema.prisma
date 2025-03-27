@@ -1,0 +1,94 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Documents {
+  id            BigInt                  @id @default(autoincrement())
+  id_company    Int
+  access_key    String                  @db.VarChar(44)
+  request_date  DateTime                @default(now()) @db.Timestamp(0)
+  updated_date  DateTime                @default(now()) @updatedAt @db.Timestamp(0)
+  origin        documents_origin
+  document_type documents_document_type
+  status        DocumentStatus
+
+  @@unique([access_key, id_company], map: "uk_access_key_company")
+  @@map("documents")
+}
+
+model Consumption {
+  id               Int                     @id @default(autoincrement())
+  id_company       Int
+  consumption_date DateTime                @db.Date
+  origin           ConsumptionOrigin
+  document_type    ConsumptionDocumentType
+  status           ConsumptionStatus
+  quantity         Int                     @default(0)
+  total            Int                     @default(0)
+
+  @@unique([id_company, consumption_date, origin, document_type, status], name: "uk_company_type_origin_date_status", map: "uk_company_type_origin_date_status")
+  @@map("consumption")
+}
+
+model NsRefCodes {
+  id          Int     @id @default(autoincrement())
+  entity      String  @db.VarChar(50)
+  description String  @db.VarChar(100)
+  created_at  DateTime @default(now()) @db.Timestamp(0)
+  updated_at  DateTime @default(now()) @updatedAt @db.Timestamp(0)
+
+  @@index([entity], name: "idx_entity")
+  @@unique([entity, description], name: "uk_entity_description")
+  @@map("ns_ref_codes")
+}
+
+enum ConsumptionOrigin {
+  file
+  email
+  ws
+}
+
+enum ConsumptionDocumentType {
+  cfe
+  cte
+  cteos
+  mdfe
+  nfce
+  nfe
+  nfse
+}
+
+enum ConsumptionStatus {
+  ok
+  pending
+  error
+  non_existing @map("non-existing")
+}
+
+enum DocumentStatus {
+  ok
+  pending
+  error
+  non_existing @map("non-existing")
+}
+
+enum documents_origin {
+  file
+  email
+  ws
+}
+
+enum documents_document_type {
+  cfe
+  cte
+  cteos
+  mdfe
+  nfce
+  nfe
+  nfse
+}
