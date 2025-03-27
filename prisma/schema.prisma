@@ -40,6 +40,15 @@ model Consumption {
   quantity         Int                     @default(0)
   total            Int                     @default(0)
 
+  origin_id         Int?
+  originRefCode     NsRefCodes?       @relation("ConsumptionOriginRelation", fields: [origin_id], references: [id])
+
+  document_type_id  Int?
+  documentTypeRefCode NsRefCodes?     @relation("ConsumptionDocumentTypeRelation", fields: [document_type_id], references: [id])
+
+  status_id         Int?
+  statusRefCode     NsRefCodes?       @relation("ConsumptionStatusRelation", fields: [status_id], references: [id])
+
   @@unique([id_company, consumption_date, origin, document_type, status], name: "uk_company_type_origin_date_status", map: "uk_company_type_origin_date_status")
   @@map("consumption")
 }
@@ -55,9 +64,15 @@ model NsRefCodes {
   @@unique([entity, description], name: "uk_entity_description")
   @@map("ns_ref_codes")
 
+  // Relations of documents
   OriginRelation Documents[] @relation("OriginRelation")
   DocumentTypeRelation Documents[] @relation("DocumentTypeRelation")
   StatusRelation Documents[] @relation("StatusRelation")
+
+  // Relations of consumption
+  ConsumptionOriginRelation Consumption[] @relation("ConsumptionOriginRelation")
+  ConsumptionDocumentTypeRelation Consumption[] @relation("ConsumptionDocumentTypeRelation")
+  ConsumptionStatusRelation Consumption[] @relation("ConsumptionStatusRelation")
 }
 
 enum ConsumptionOrigin {
