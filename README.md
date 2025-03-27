@@ -1,110 +1,98 @@
-# nsdocs - Módulo de Consumo de Documentos
+<p align="center">
+  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
+</p>
 
-Este projeto faz parte do banco de dados do **nsdocs**, um gerenciador de documentos fiscais. Este módulo é responsável pelo controle do consumo de documentos fiscais dos clientes. Cada cliente possui uma quantidade de documentos que pode importar por mês e essa parte do DB faz o controle do consumo.
+[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
+[circleci-url]: https://circleci.com/gh/nestjs/nest
 
-## Estrutura do Projeto
+  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
+    <p align="center">
+<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
+<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
+<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
+<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
+<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
+<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
+<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
+  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
+    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
+  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
+</p>
+  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
+  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
 
-### Scripts
+## Description
 
-#### `ddl.sql`
-Este script contém a definição do banco de dados e suas tabelas, além de uma procedure e triggers para gerenciar o consumo de documentos. Abaixo está uma descrição detalhada:
+[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
 
-- **Tabelas**:
-  - `documents`: Armazena os documentos fiscais importados pelos clientes. Contém informações como:
-    - `id_company`: Identificador da empresa.
-    - `access_key`: Chave de acesso única do documento.
-    - `request_date`: Data de importação do documento.
-    - `origin`: Origem do documento (`file`, `email`, `ws`).
-    - `document_type`: Tipo do documento (`nfe`, `cte`, etc.).
-    - `status`: Status do documento (`ok`, `pending`, `error`, `non-existing`).
-    - **UNIQUE KEY**:
-      - `uk_access_key_company`: Garante que não existam dois documentos com a mesma `access_key` para a mesma empresa (`id_company`).
+## Project setup
 
-  - `consumption`: Gerencia o consumo de documentos por cliente. Contém informações como:
-    - `id_company`: Identificador da empresa.
-    - `consumption_date`: Data do consumo.
-    - `origin`, `document_type`, `status`: Detalhes do consumo.
-    - `quantity`: Quantidade de documentos consumidos.
-    - `total`: Total acumulado de documentos.
-    - **UNIQUE KEY**:
-      - `uk_company_type_origin_date_status`: Garante que não existam registros duplicados para a mesma combinação de `id_company`, `consumption_date`, `origin`, `document_type` e `status`.
+```bash
+$ yarn install
+```
 
-- **Procedures**:
-  - `update_company_consumption`: Atualiza o consumo de documentos de uma empresa com base nos documentos importados.
+## Compile and run the project
 
-- **Triggers**:
-  - `trg_documents_ai`: Atualiza o consumo ao inserir um novo documento.
-  - `trg_documents_au`: Atualiza o consumo ao alterar um documento.
-  - `trg_documents_ad`: Atualiza o consumo ao excluir um documento.
+```bash
+# development
+$ yarn run start
 
-#### `dml.sql`
-Este script contém exemplos de dados e operações para popular e manipular o banco de dados:
+# watch mode
+$ yarn run start:dev
 
-- **Inserts**:
-  - Exemplos de inserção de documentos na tabela `documents`, com diferentes combinações de empresas, tipos de documentos, origens e status.
+# production mode
+$ yarn run start:prod
+```
 
-- **Updates**:
-  - Exemplos de atualização do status de documentos, como alterar de `pending` para `ok`.
+## Run tests
 
-- **Deletes**:
-  - Exemplos de exclusão de documentos, o que impacta diretamente no consumo registrado.
+```bash
+# unit tests
+$ yarn run test
 
-### Subindo o Ambiente com Docker
+# e2e tests
+$ yarn run test:e2e
 
-Para configurar o ambiente, siga os passos abaixo:
+# test coverage
+$ yarn run test:cov
+```
 
-1. **Subir o container Docker**:
-   - Certifique-se de que o Docker está instalado e em execução.
-   - Se esta é a primeira execução ou você deseja recriar o ambiente do zero, remova o volume existente:
-     ```bash
-     docker-compose down -v
-     ```
-   - Navegue até o diretório do projeto e execute:
-     ```bash
-     docker-compose up -d
-     ```
+## Deployment
 
-2. **Inicialização Automática**:
-   - Na primeira execução, o banco de dados será automaticamente criado e configurado.
-   - Os scripts são executados na seguinte ordem:
-     1. `ddl.sql`: Cria a estrutura do banco de dados, tabelas, procedures e triggers
-     2. `dml.sql`: Insere os dados de exemplo e executa operações de teste
+When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
 
-3. **Acessar o banco de dados**:
-   - Após o container estar em execução, você pode se conectar no DB utilizando o usuário `root`. Como o ambiente está configurado com `MYSQL_ALLOW_EMPTY_PASSWORD=yes`, não é necessário senha.
+If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
 
-> **Nota**: Os scripts de inicialização (`ddl.sql` e `dml.sql`) só são executados quando o volume do banco de dados está vazio, ou seja, na primeira execução ou após remover o volume com `docker-compose down -v`.
+```bash
+$ yarn install -g mau
+$ mau deploy
+```
 
+With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
 
-## Desafios no Controle de Consumo em Banco de Dados
+## Resources
 
-Embora o controle de consumo em banco de dados seja uma solução funcional, ele apresenta alguns desafios que devem ser considerados:
+Check out a few resources that may come in handy when working with NestJS:
 
-### 1. **Locks em Registros**
-- Quando múltiplos documentos são enviados simultaneamente por uma mesma empresa, especialmente em cenários de alta concorrência, podem ocorrer **locks** nos registros da tabela `consumption`.
-- Esses locks podem causar atrasos no processamento de novos documentos, impactando a performance geral do sistema.
-- Em casos extremos, podem ocorrer **deadlocks**, exigindo reprocessamento ou intervenção manual.
+- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
+- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
+- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
+- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
+- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
+- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
+- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
+- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
 
-### 2. **Processamento Síncrono**
-- O sistema depende de triggers e procedures para atualizar o consumo automaticamente. Como essas operações são executadas de forma síncrona, ocorre bastante lentidão ao gravar o documento.
-- Além disso, erros em triggers ou procedures podem ser difíceis de rastrear e corrigir, já que são executados automaticamente pelo banco de dados.
+## Support
 
-### 3. **Dificuldade de Escalabilidade**
-- À medida que o número de empresas e documentos cresce, o banco de dados pode se tornar um gargalo. Consultas complexas, como as que envolvem `GROUP BY` e agregações, podem impactar o desempenho.
-- Escalar horizontalmente (adicionar mais servidores) é mais difícil em um banco de dados relacional, especialmente quando há dependência de triggers e procedures.
+Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
 
-### 4. **Manutenção e Adição de Funcionalidades**
-- Alterar ou adicionar novas funcionalidades, como novos tipos de documentos ou origens, pode ser complicado. Isso geralmente exige alterações em múltiplas partes do sistema, incluindo tabelas, triggers e procedures.
-- Testar essas alterações em um ambiente de produção pode ser arriscado, já que erros podem impactar diretamente os dados existentes.
+## Stay in touch
 
-### 5. **Monitoramento e Depuração**
-- Monitorar o consumo e depurar problemas em tempo real pode ser desafiador. Por exemplo:
-  - Identificar por que um registro específico não foi atualizado corretamente.
-  - Rastrear o impacto de um erro em uma trigger ou procedure.
-- Logs detalhados são necessários, mas podem aumentar a complexidade do sistema.
+- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
+- Website - [https://nestjs.com](https://nestjs.com/)
+- Twitter - [@nestframework](https://twitter.com/nestframework)
 
-### Considerações Finais
-Embora o controle de consumo em banco de dados seja uma abordagem centralizada e eficiente para sistemas de pequeno a médio porte, é importante considerar esses desafios ao projetar e escalar o sistema. Em cenários de alta carga ou requisitos complexos, pode ser necessário explorar alternativas, como:
-- Processamento em filas (ex.: RabbitMQ, Kafka) para gerenciar atualizações de consumo.
-- Uso de bancos de dados especializados em alta concorrência ou escalabilidade horizontal (ex.: NoSQL).
-- Separação da lógica de consumo para um serviço dedicado fora do banco de dados.
+## License
+
+Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
