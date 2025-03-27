@@ -17,6 +17,15 @@ model Documents {
   document_type documents_document_type
   status        DocumentStatus
 
+  origin_id     Int?
+  OriginRefCodes    NsRefCodes?       @relation("OriginRelation", fields: [origin_id], references: [id])
+  
+  document_type_id Int?
+  documentTypeRefCodes  NsRefCodes?       @relation("DocumentTypeRelation", fields: [document_type_id], references: [id])
+
+  status_id       Int?
+  statusRefCode   NsRefCodes?       @relation("StatusRelation", fields: [status_id], references: [id])
+
   @@unique([access_key, id_company], map: "uk_access_key_company")
   @@map("documents")
 }
@@ -45,6 +54,10 @@ model NsRefCodes {
   @@index([entity], name: "idx_entity")
   @@unique([entity, description], name: "uk_entity_description")
   @@map("ns_ref_codes")
+
+  OriginRelation Documents[] @relation("OriginRelation")
+  DocumentTypeRelation Documents[] @relation("DocumentTypeRelation")
+  StatusRelation Documents[] @relation("StatusRelation")
 }
 
 enum ConsumptionOrigin {
