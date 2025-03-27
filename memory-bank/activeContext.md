@@ -1,7 +1,7 @@
 # Active Context: NSdocs Document Consumption Module
 
 ## Current Focus
-Implementing CRUD operations for documents with CQRS pattern and MediatR
+Replacing MySQL triggers with event-driven architecture using RabbitMQ
 
 ## Recent Changes
 1. **Infrastructure Setup**
@@ -24,6 +24,17 @@ Implementing CRUD operations for documents with CQRS pattern and MediatR
    - Added command handlers with proper validation
    - Set up RESTful API endpoints for all operations
 
+5. **Event-Driven Architecture**
+   - Created document event classes
+   - Implemented event publishing in command handlers
+   - Created worker service project structure
+   - Prepared RabbitMQ integration
+
+6. **Docker Setup**
+   - Added RabbitMQ to docker-compose.yml
+   - Configured connection settings in appsettings.json
+   - Set up networking between services
+
 ## Implementation Progress
 
 ### Completed Tasks
@@ -34,6 +45,7 @@ Implementing CRUD operations for documents with CQRS pattern and MediatR
 
 2. **Domain Layer**
    - Document entity
+   - Consumption entity
    - Enum definitions
    - Value object mapping
 
@@ -41,6 +53,7 @@ Implementing CRUD operations for documents with CQRS pattern and MediatR
    - ApplicationDbContext configuration
    - Entity type configurations
    - Generic enum converter
+   - Event publisher implementations
 
 4. **API Layer**
    - Complete CRUD endpoints
@@ -52,65 +65,97 @@ Implementing CRUD operations for documents with CQRS pattern and MediatR
    - MediatR integration
    - FluentValidation for requests
 
+6. **Event Publishing**
+   - Document event classes
+   - Event publishing in command handlers
+   - In-memory event publisher
+   - RabbitMQ event publisher (placeholder)
+
+7. **Database Migration**
+   - Script to drop triggers
+   - Kept stored procedure for reference
+
+8. **Worker Service**
+   - Project structure
+   - Event consumer placeholder
+   - Configuration for RabbitMQ
+
+9. **Docker Environment**
+   - RabbitMQ container configuration
+   - Network setup
+   - Connection settings in applications
+
 ### Active Decisions
 
-1. **Data Mapping Strategy**
+1. **Event-Driven Architecture**
+   - Publish events for document changes
+   - Process events asynchronously
+   - Update consumption in worker service
+   - Decouple document and consumption operations
+
+2. **Data Mapping Strategy**
    - Use generic converter for all enums
    - Consistent kebab-case database values
    - Strongly-typed entity configurations
 
-2. **API Design**
+3. **API Design**
    - Minimal API approach
    - Endpoint grouping
    - Clear documentation
    - RESTful conventions
 
-3. **Command Handling**
+4. **Command Handling**
    - Boolean return for update/delete operations
    - Appropriate HTTP status codes
    - Validation before processing
+   - Event publishing after successful operations
+
+5. **Docker Configuration**
+   - Containerized RabbitMQ
+   - Shared network for services
+   - Consistent connection settings
 
 ### Next Steps
 
 1. **Immediate Tasks**
-   - Implement event publishing for document changes
-   - Set up worker service for consumption tracking
-   - Add integration tests for API endpoints
+   - Implement RabbitMQ integration with MassTransit
+   - Complete worker service implementation
+   - Add integration tests for event processing
 
 2. **Upcoming Features**
    - Consumption tracking endpoints
-   - Database migrations
    - Performance optimization
+   - Monitoring and logging
 
 3. **Technical Improvements**
-   - Error handling middleware
-   - Logging configuration
-   - Unit test setup
+   - Error handling for event processing
+   - Retry mechanisms for failed events
+   - Dead letter handling
 
 ## Key Considerations
 
 ### Current Focus Areas
-1. Code organization
-2. Data consistency
-3. API documentation
-4. Type safety
-5. Event-driven architecture
+1. Event-driven architecture
+2. Asynchronous processing
+3. Data consistency
+4. Scalability
+5. Reliability
 
 ### Monitoring Points
-1. API response times
-2. Database query performance
-3. Error handling effectiveness
-4. Code maintainability
-5. Event processing reliability
+1. Event publishing success rate
+2. Event processing time
+3. Consumption data accuracy
+4. System throughput
+5. Error handling effectiveness
 
 ## Success Criteria
 
 ### Technical Goals
-- Clean, maintainable codebase
-- Type-safe data handling
-- Clear API documentation
-- Efficient database queries
+- Successful replacement of triggers
 - Reliable event processing
+- Accurate consumption data
+- Improved scalability
+- Better error handling
 
 ### Business Goals
 - Reliable document tracking

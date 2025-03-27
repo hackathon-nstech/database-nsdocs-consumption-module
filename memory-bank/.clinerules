@@ -23,10 +23,16 @@
    - Boolean return for update/delete operations
 
 4. **Event Design**
-   - Minimal event payloads
-   - EventType enum for action type
-   - Required event properties
-   - Proper event versioning
+   - Base event class with common properties
+   - Specific event classes for each operation
+   - Previous values in update events
+   - Event publishing after successful operations
+
+5. **Event-Driven Architecture**
+   - Publish events for document changes
+   - Process events asynchronously
+   - Update consumption in worker service
+   - Decouple document and consumption operations
 
 ### Development Guidelines
 1. **Documentation Priority**
@@ -73,147 +79,203 @@
 
 2. **Event Publishing**
    ```csharp
-   // Event structure
-   DocumentEvent {
-     EventType = Created|Updated|Deleted,
-     CompanyId = 123,
-     RequestDate = utcNow,
-     Origin = File|Email|Ws,
-     DocumentType = Nfe|Cte|etc,
-     Status = Ok|Pending|Error|NonExisting
+   // Base event class
+   public abstract class DocumentEventBase
+   {
+       public long DocumentId { get; set; }
+       public int CompanyId { get; set; }
+       public string AccessKey { get; set; } = string.Empty;
+       public DateTime RequestDate { get; set; }
+       public DocumentOrigin Origin { get; set; }
+       public DocumentType DocumentType { get; set; }
+       public DocumentStatus Status { get; set; }
    }
+
+   // Specific events
+   public class DocumentCreatedEvent : DocumentEventBase { }
+   
+   public class DocumentUpdatedEvent : DocumentEventBase 
+   {
+       public DocumentOrigin PreviousOrigin { get; set; }
+       public DocumentStatus PreviousStatus { get; set; }
+       public int PreviousCompanyId { get; set; }
+   }
+   
+   public class DocumentDeletedEvent : DocumentEventBase { }
    ```
 
 3. **Worker Processing**
    ```csharp
    // Consumer pattern
-   public async Task Consume(ConsumeContext<DocumentEvent> context)
+   public class DocumentEventConsumer : BackgroundService
    {
-     var evt = context.Message;
-     // Update consumption based on event type
-     // No need to query document table
+       protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+       {
+           // Subscribe to events and process them
+       }
+       
+       private Task HandleDocumentCreatedEvent(DocumentCreatedEvent @event)
+       {
+           // Update consumption for created document
+           return Task.CompletedTask;
+       }
+       
+       private Task HandleDocumentUpdatedEvent(DocumentUpdatedEvent @event)
+       {
+           // Update consumption for updated document
+           return Task.CompletedTask;
+       }
+       
+       private Task HandleDocumentDeletedEvent(DocumentDeletedEvent @event)
+       {
+           // Update consumption for deleted document
+           return Task.CompletedTask;
+       }
    }
    ```
 
 ## Implementation Guidelines
 
-### Command Handling
+### Command Handling with Event Publishing
 ```csharp
 // Create Command Handler
-public class CreateDocumentHandler
+public class CreateDocumentCommandHandler : IRequestHandler<CreateDocumentCommand, long>
 {
-    // Validate command
-    await _validator.ValidateAndThrowAsync(command);
-    
-    // Process command
-    var document = new Document { ... };
-    await _repository.AddAsync(document);
-    
-    // Publish event
-    await _publisher.PublishAsync(new DocumentEvent { ... });
+    private readonly IApplicationDbContext _context;
+    private readonly IEventPublisher _eventPublisher;
+
+    public async Task<long> Handle(CreateDocumentCommand request, CancellationToken cancellationToken)
+    {
+        // Create document
+        var document = new Document { ... };
+        _context.Documents.Add(document);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        // Publish event
+        await _eventPublisher.PublishAsync(new DocumentCreatedEvent
+        {
+            DocumentId = document.Id,
+            CompanyId = document.CompanyId,
+            // Other properties...
+        }, cancellationToken);
+
+        return document.Id;
+    }
 }
 
 // Update Command Handler
-public class UpdateDocumentHandler
+public class UpdateDocumentCommandHandler : IRequestHandler<UpdateDocumentCommand, bool>
 {
-    // Find entity
-    var document = await _context.Documents.FirstOrDefaultAsync(d => d.Id == request.Id);
-    if (document == null) return false;
-    
-    // Update properties
-    document.Property = request.Property;
-    document.UpdatedDate = DateTime.UtcNow;
-    
-    // Save changes
-    await _context.SaveChangesAsync();
-    return true;
+    private readonly IApplicationDbContext _context;
+    private readonly IEventPublisher _eventPublisher;
+
+    public async Task<bool> Handle(UpdateDocumentCommand request, CancellationToken cancellationToken)
+    {
+        var document = await _context.Documents
+            .FirstOrDefaultAsync(d => d.Id == request.Id, cancellationToken);
+
+        if (document == null)
+        {
+            return false;
+        }
+
+        // Store previous values
+        var previousCompanyId = document.CompanyId;
+        var previousOrigin = document.Origin;
+        var previousStatus = document.Status;
+
+        // Update document
+        document.CompanyId = request.CompanyId;
+        // Other properties...
+        
+        await _context.SaveChangesAsync(cancellationToken);
+
+        // Publish event if relevant fields changed
+        if (previousCompanyId != document.CompanyId || 
+            previousOrigin != document.Origin || 
+            previousStatus != document.Status)
+        {
+            await _eventPublisher.PublishAsync(new DocumentUpdatedEvent
+            {
+                DocumentId = document.Id,
+                // Other properties...
+                PreviousCompanyId = previousCompanyId,
+                PreviousOrigin = previousOrigin,
+                PreviousStatus = previousStatus
+            }, cancellationToken);
+        }
+
+        return true;
+    }
 }
 
 // Delete Command Handler
-public class DeleteDocumentHandler
+public class DeleteDocumentCommandHandler : IRequestHandler<DeleteDocumentCommand, bool>
 {
-    // Find entity
-    var document = await _context.Documents.FirstOrDefaultAsync(d => d.Id == request.Id);
-    if (document == null) return false;
-    
-    // Remove entity
-    _context.Documents.Remove(document);
-    await _context.SaveChangesAsync();
-    return true;
-}
-```
+    private readonly IApplicationDbContext _context;
+    private readonly IEventPublisher _eventPublisher;
 
-### Database Operations
-```csharp
-// Entity Configuration
-public class DocumentConfiguration : IEntityTypeConfiguration<Document>
-{
-    public void Configure(EntityTypeBuilder<Document> builder)
+    public async Task<bool> Handle(DeleteDocumentCommand request, CancellationToken cancellationToken)
     {
-        builder.Property(d => d.AccessKey)
-               .HasMaxLength(44)
-               .IsRequired();
-               
-        builder.Property(d => d.Origin)
-               .HasConversion<string>();
-               
-        // etc...
+        var document = await _context.Documents
+            .FirstOrDefaultAsync(d => d.Id == request.Id, cancellationToken);
+
+        if (document == null)
+        {
+            return false;
+        }
+
+        // Store document data for the event
+        var documentEvent = new DocumentDeletedEvent
+        {
+            DocumentId = document.Id,
+            // Other properties...
+        };
+
+        // Delete document
+        _context.Documents.Remove(document);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        // Publish event
+        await _eventPublisher.PublishAsync(documentEvent, cancellationToken);
+
+        return true;
     }
 }
 ```
 
-### API Endpoint Patterns
-```csharp
-// GET endpoint
-app.MapGet("/api/resource", async (IMediator mediator) =>
-{
-    var result = await mediator.Send(new GetResourceQuery());
-    return Results.Ok(result);
-})
-.WithName("GetResource")
-.WithOpenApi();
-
-// POST endpoint
-app.MapPost("/api/resource", async (CreateResourceCommand command, IMediator mediator) =>
-{
-    var id = await mediator.Send(command);
-    return Results.Created($"/api/resource/{id}", id);
-})
-.WithName("CreateResource")
-.WithOpenApi();
-
-// PUT endpoint
-app.MapPut("/api/resource/{id}", async (int id, UpdateResourceCommand command, IMediator mediator) =>
-{
-    if (id != command.Id) return Results.BadRequest();
-    var result = await mediator.Send(command);
-    return result ? Results.NoContent() : Results.NotFound();
-})
-.WithName("UpdateResource")
-.WithOpenApi();
-
-// DELETE endpoint
-app.MapDelete("/api/resource/{id}", async (int id, IMediator mediator) =>
-{
-    var result = await mediator.Send(new DeleteResourceCommand { Id = id });
-    return result ? Results.NoContent() : Results.NotFound();
-})
-.WithName("DeleteResource")
-.WithOpenApi();
-```
-
 ### Event Publishing
 ```csharp
-// MassTransit Configuration
-services.AddMassTransit(x =>
+// Event Publisher Interface
+public interface IEventPublisher
 {
-    x.UsingRabbitMq((context, cfg) =>
+    Task PublishAsync<TEvent>(TEvent @event, CancellationToken cancellationToken = default) where TEvent : class;
+}
+
+// In-Memory Implementation
+public class InMemoryEventPublisher : IEventPublisher
+{
+    private readonly ILogger<InMemoryEventPublisher> _logger;
+
+    public Task PublishAsync<TEvent>(TEvent @event, CancellationToken cancellationToken = default) where TEvent : class
     {
-        cfg.Host("localhost");
-        cfg.Message<DocumentEvent>(e => 
-            e.SetEntityName("nsdocs-documents"));
-    });
-});
+        _logger.LogInformation("Event published: {EventType} - {EventData}", typeof(TEvent).Name, @event);
+        return Task.CompletedTask;
+    }
+}
+
+// RabbitMQ Implementation
+public class RabbitMQEventPublisher : IEventPublisher
+{
+    private readonly ILogger<RabbitMQEventPublisher> _logger;
+    private readonly RabbitMQOptions _options;
+
+    public Task PublishAsync<TEvent>(TEvent @event, CancellationToken cancellationToken = default) where TEvent : class
+    {
+        // Publish to RabbitMQ
+        return Task.CompletedTask;
+    }
+}
 ```
 
 ## Project Evolution
@@ -232,16 +294,16 @@ services.AddMassTransit(x =>
    - Unit testing
 
 3. **Event Publishing**
+   - Event classes
+   - Event publishing in command handlers
+   - In-memory publisher
+   - Database migration
+
+4. **RabbitMQ Integration**
    - RabbitMQ setup
-   - Event publishing
+   - Worker service implementation
    - Error handling
    - Integration testing
-
-4. **Worker Service**
-   - Consumer setup
-   - Processing logic
-   - Performance tuning
-   - End-to-end testing
 
 ## Progress Tracking
 
@@ -259,13 +321,13 @@ services.AddMassTransit(x =>
    - Error handling functions
 
 3. **Event Publishing**
-   - Events publish successfully
-   - RabbitMQ receives messages
+   - Event classes defined
+   - Event publishing implemented
+   - Database migration script created
+   - Worker service structure created
+
+4. **RabbitMQ Integration**
+   - RabbitMQ properly configured
+   - Worker processes events correctly
    - Integration tests pass
    - Error handling works
-
-4. **Worker Service**
-   - Consumes events properly
-   - Updates consumption correctly
-   - Handles errors appropriately
-   - Meets performance targets

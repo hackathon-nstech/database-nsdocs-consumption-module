@@ -11,6 +11,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     }
 
     public DbSet<Document> Documents => Set<Document>();
+    public DbSet<Consumption> Consumptions => Set<Consumption>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("NSdocs.Domain")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+6a8cc31c7739127e70328b45d0db0ccb77a5c0f0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+017903851698201852a9139a78a099338c8b0051")]
 [assembly: System.Reflection.AssemblyProductAttribute("NSdocs.Domain")]
 [assembly: System.Reflection.AssemblyTitleAttribute("NSdocs.Domain")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

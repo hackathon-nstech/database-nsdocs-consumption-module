@@ -58,3 +58,5 @@
 /Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.API/obj/Debug/net9.0/NSdocs.API.pdb
 /Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.API/obj/Debug/net9.0/NSdocs.API.genruntimeconfig.cache
 /Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.API/obj/Debug/net9.0/ref/NSdocs.API.dll
+/Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.API/bin/Debug/net9.0/Microsoft.Extensions.Configuration.Binder.dll
+/Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.API/bin/Debug/net9.0/Microsoft.Extensions.Options.ConfigurationExtensions.dll

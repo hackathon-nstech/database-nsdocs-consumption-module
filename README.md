@@ -1,110 +1,125 @@
-# nsdocs - Módulo de Consumo de Documentos
+# NSdocs Document Consumption Module
 
-Este projeto faz parte do banco de dados do **nsdocs**, um gerenciador de documentos fiscais. Este módulo é responsável pelo controle do consumo de documentos fiscais dos clientes. Cada cliente possui uma quantidade de documentos que pode importar por mês e essa parte do DB faz o controle do consumo.
+This project implements a .NET Core API for document consumption tracking, replacing MySQL triggers with command handlers and RabbitMQ events.
 
-## Estrutura do Projeto
+## Project Structure
 
-### Scripts
+- **NSdocs.API**: API endpoints and controllers
+- **NSdocs.Application**: Application logic, commands, queries, and events
+- **NSdocs.Domain**: Domain entities and enums
+- **NSdocs.Infrastructure**: Infrastructure concerns like database access and event publishing
+- **NSdocs.Worker**: Background worker for processing document events
 
-#### `ddl.sql`
-Este script contém a definição do banco de dados e suas tabelas, além de uma procedure e triggers para gerenciar o consumo de documentos. Abaixo está uma descrição detalhada:
+## Implementation Details
 
-- **Tabelas**:
-  - `documents`: Armazena os documentos fiscais importados pelos clientes. Contém informações como:
-    - `id_company`: Identificador da empresa.
-    - `access_key`: Chave de acesso única do documento.
-    - `request_date`: Data de importação do documento.
-    - `origin`: Origem do documento (`file`, `email`, `ws`).
-    - `document_type`: Tipo do documento (`nfe`, `cte`, etc.).
-    - `status`: Status do documento (`ok`, `pending`, `error`, `non-existing`).
-    - **UNIQUE KEY**:
-      - `uk_access_key_company`: Garante que não existam dois documentos com a mesma `access_key` para a mesma empresa (`id_company`).
+### Replacing MySQL Triggers
 
-  - `consumption`: Gerencia o consumo de documentos por cliente. Contém informações como:
-    - `id_company`: Identificador da empresa.
-    - `consumption_date`: Data do consumo.
-    - `origin`, `document_type`, `status`: Detalhes do consumo.
-    - `quantity`: Quantidade de documentos consumidos.
-    - `total`: Total acumulado de documentos.
-    - **UNIQUE KEY**:
-      - `uk_company_type_origin_date_status`: Garante que não existam registros duplicados para a mesma combinação de `id_company`, `consumption_date`, `origin`, `document_type` e `status`.
+The original implementation used MySQL triggers to update consumption records when documents were created, updated, or deleted. This implementation replaces those triggers with:
 
-- **Procedures**:
-  - `update_company_consumption`: Atualiza o consumo de documentos de uma empresa com base nos documentos importados.
+1. Command handlers that publish events when documents are modified
+2. A worker service that consumes these events and updates consumption records
 
-- **Triggers**:
-  - `trg_documents_ai`: Atualiza o consumo ao inserir um novo documento.
-  - `trg_documents_au`: Atualiza o consumo ao alterar um documento.
-  - `trg_documents_ad`: Atualiza o consumo ao excluir um documento.
+### Event-Driven Architecture
 
-#### `dml.sql`
-Este script contém exemplos de dados e operações para popular e manipular o banco de dados:
+- **Document Events**: Events are published when documents are created, updated, or deleted
+- **Event Publishing**: Currently using an in-memory publisher, with a RabbitMQ implementation ready for production
+- **Event Consumption**: A worker service consumes events and updates consumption records
 
-- **Inserts**:
-  - Exemplos de inserção de documentos na tabela `documents`, com diferentes combinações de empresas, tipos de documentos, origens e status.
+## Database Changes
 
-- **Updates**:
-  - Exemplos de atualização do status de documentos, como alterar de `pending` para `ok`.
+To migrate from the trigger-based approach to the event-driven approach:
 
-- **Deletes**:
-  - Exemplos de exclusão de documentos, o que impacta diretamente no consumo registrado.
+1. Backup the current consumption data and remove triggers using one of these methods:
 
-### Subindo o Ambiente com Docker
+   **Option 1**: Run the shell script (recommended):
+   ```bash
+   chmod +x scripts/run-drop-triggers.sh
+   ./scripts/run-drop-triggers.sh
+   ```
 
-Para configurar o ambiente, siga os passos abaixo:
+   **Option 2**: Run the SQL script directly:
+   ```bash
+   mysql -u root nsdocs_consumption < scripts/drop_triggers.sql
+   ```
 
-1. **Subir o container Docker**:
-   - Certifique-se de que o Docker está instalado e em execução.
-   - Se esta é a primeira execução ou você deseja recriar o ambiente do zero, remova o volume existente:
-     ```bash
-     docker-compose down -v
-     ```
-   - Navegue até o diretório do projeto e execute:
-     ```bash
-     docker-compose up -d
-     ```
+   The script will:
+   - Create a backup of current consumption data in a `backup_consumptions` table
+   - Remove the MySQL triggers
+   - Keep the stored procedure for reference
 
-2. **Inicialização Automática**:
-   - Na primeira execução, o banco de dados será automaticamente criado e configurado.
-   - Os scripts são executados na seguinte ordem:
-     1. `ddl.sql`: Cria a estrutura do banco de dados, tabelas, procedures e triggers
-     2. `dml.sql`: Insere os dados de exemplo e executa operações de teste
+2. Deploy services:
+   - Start the RabbitMQ container
+   - Deploy the API service
+   - Deploy the worker service
 
-3. **Acessar o banco de dados**:
-   - Após o container estar em execução, você pode se conectar no DB utilizando o usuário `root`. Como o ambiente está configurado com `MYSQL_ALLOW_EMPTY_PASSWORD=yes`, não é necessário senha.
+## Running the Application
 
-> **Nota**: Os scripts de inicialização (`ddl.sql` e `dml.sql`) só são executados quando o volume do banco de dados está vazio, ou seja, na primeira execução ou após remover o volume com `docker-compose down -v`.
+### Prerequisites
 
+- .NET 9.0 SDK
+- Docker and Docker Compose
 
-## Desafios no Controle de Consumo em Banco de Dados
+### Development Setup
 
-Embora o controle de consumo em banco de dados seja uma solução funcional, ele apresenta alguns desafios que devem ser considerados:
+1. Clone the repository
+2. Start the infrastructure services:
 
-### 1. **Locks em Registros**
-- Quando múltiplos documentos são enviados simultaneamente por uma mesma empresa, especialmente em cenários de alta concorrência, podem ocorrer **locks** nos registros da tabela `consumption`.
-- Esses locks podem causar atrasos no processamento de novos documentos, impactando a performance geral do sistema.
-- Em casos extremos, podem ocorrer **deadlocks**, exigindo reprocessamento ou intervenção manual.
+```bash
+docker-compose up -d
+```
 
-### 2. **Processamento Síncrono**
-- O sistema depende de triggers e procedures para atualizar o consumo automaticamente. Como essas operações são executadas de forma síncrona, ocorre bastante lentidão ao gravar o documento.
-- Além disso, erros em triggers ou procedures podem ser difíceis de rastrear e corrigir, já que são executados automaticamente pelo banco de dados.
+This will start:
+- MySQL database on port 3306
+- RabbitMQ on port 5672 (AMQP) and 15672 (Management UI)
 
-### 3. **Dificuldade de Escalabilidade**
-- À medida que o número de empresas e documentos cresce, o banco de dados pode se tornar um gargalo. Consultas complexas, como as que envolvem `GROUP BY` e agregações, podem impactar o desempenho.
-- Escalar horizontalmente (adicionar mais servidores) é mais difícil em um banco de dados relacional, especialmente quando há dependência de triggers e procedures.
+3. Run the API:
 
-### 4. **Manutenção e Adição de Funcionalidades**
-- Alterar ou adicionar novas funcionalidades, como novos tipos de documentos ou origens, pode ser complicado. Isso geralmente exige alterações em múltiplas partes do sistema, incluindo tabelas, triggers e procedures.
-- Testar essas alterações em um ambiente de produção pode ser arriscado, já que erros podem impactar diretamente os dados existentes.
+```bash
+cd src/NSdocs.API
+dotnet run
+```
 
-### 5. **Monitoramento e Depuração**
-- Monitorar o consumo e depurar problemas em tempo real pode ser desafiador. Por exemplo:
-  - Identificar por que um registro específico não foi atualizado corretamente.
-  - Rastrear o impacto de um erro em uma trigger ou procedure.
-- Logs detalhados são necessários, mas podem aumentar a complexidade do sistema.
+4. Run the worker (when implemented):
 
-### Considerações Finais
-Embora o controle de consumo em banco de dados seja uma abordagem centralizada e eficiente para sistemas de pequeno a médio porte, é importante considerar esses desafios ao projetar e escalar o sistema. Em cenários de alta carga ou requisitos complexos, pode ser necessário explorar alternativas, como:
-- Processamento em filas (ex.: RabbitMQ, Kafka) para gerenciar atualizações de consumo.
-- Uso de bancos de dados especializados em alta concorrência ou escalabilidade horizontal (ex.: NoSQL).
-- Separação da lógica de consumo para um serviço dedicado fora do banco de dados.
+```bash
+cd src/NSdocs.Worker
+dotnet run
+```
+
+### RabbitMQ Management UI
+
+The RabbitMQ Management UI is available at http://localhost:15672 with the following credentials:
+- Username: guest
+- Password: guest
+
+## Implementation Checkpoints
+
+### Checkpoint 1: Event Publishing ✅
+
+- Created event classes for document operations
+- Implemented event publishing in command handlers
+- Created stub implementations for event publishers
+
+### Checkpoint 2: Database Migration ✅
+
+- Created migration script to drop triggers
+- Kept stored procedure for reference
+
+### Checkpoint 3: Worker Service (Placeholder) ✅
+
+- Created worker project structure
+- Implemented placeholder for event consumers
+- Ready for RabbitMQ integration
+
+### Checkpoint 4: Docker Setup ✅
+
+- Added RabbitMQ to docker-compose.yml
+- Configured connection settings in appsettings.json
+- Set up networking between services
+
+## Future Enhancements
+
+1. **RabbitMQ Integration**: Replace the in-memory publisher with the RabbitMQ implementation
+2. **Worker Implementation**: Implement the consumption update logic in the worker
+3. **Monitoring**: Add monitoring and logging for event processing
+4. **Error Handling**: Implement retry and dead letter handling for failed events
