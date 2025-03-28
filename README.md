@@ -1,29 +1,34 @@
 # NSdocs Document Consumption Module
 
-This project implements a .NET Core API for document consumption tracking, replacing MySQL triggers with command handlers and RabbitMQ events.
+This project implements a .NET Core API for document consumption tracking, replacing MySQL triggers with command handlers and leveraging Redis for coordination and potential eventing.
 
 ## Project Structure
 
 - **NSdocs.API**: API endpoints and controllers
 - **NSdocs.Application**: Application logic, commands, queries, and events
 - **NSdocs.Domain**: Domain entities and enums
-- **NSdocs.Infrastructure**: Infrastructure concerns like database access and event publishing
-- **NSdocs.Worker**: Background worker for processing document events
+- **NSdocs.Infrastructure**: Infrastructure concerns like database access, Redis interactions, etc.
+- **NSdocs.Flusher**: Background worker service for processing tasks/events and updating the database
 
-## Implementation Details
+## How the Solution Works
 
-### Replacing MySQL Triggers
+This solution transitions from a database-trigger-based system to an event-driven architecture for tracking document consumption.
 
-The original implementation used MySQL triggers to update consumption records when documents were created, updated, or deleted. This implementation replaces those triggers with:
+### Core Workflow
 
-1. Command handlers that publish events when documents are modified
-2. A worker service that consumes these events and updates consumption records
+1.  **API Interaction**: When a document is created, updated, or deleted via the `NSdocs.API`, the corresponding command handler is invoked.
+2.  **Coordination/Eventing**: Instead of directly modifying consumption data in the API request path, the system uses Redis. This could involve Redis Pub/Sub for simple eventing or Redis Streams for more robust event handling, along with Redis data structures for coordination (e.g., locking, work distribution). The `NSdocs.API` interacts with Redis to signal changes or queue work.
+3.  **Processing**: The `NSdocs.Flusher` service (acting as a worker) interacts with Redis to pick up tasks or events.
+4.  **Consumption Update**: Upon receiving an event, the worker service processes it and updates the consumption records in the database accordingly.
 
-### Event-Driven Architecture
+This decoupling improves scalability, maintainability, and resilience compared to using database triggers.
 
-- **Document Events**: Events are published when documents are created, updated, or deleted
-- **Event Publishing**: Currently using an in-memory publisher, with a RabbitMQ implementation ready for production
-- **Event Consumption**: A worker service consumes events and updates consumption records
+### Key Components
+
+-   **NSdocs.API**: Handles incoming requests, validates data, executes commands, and publishes events.
+-   **NSdocs.Application**: Contains the core business logic, command/query handlers, and event definitions.
+-   **NSdocs.Infrastructure**: Provides implementations for data access (database context), Redis interactions (locking, potentially Pub/Sub or Streams), etc.
+-   **NSdocs.Flusher**: A background service (worker) responsible for processing tasks/events from Redis and updating the database.
 
 ## Database Changes
 
@@ -48,9 +53,9 @@ To migrate from the trigger-based approach to the event-driven approach:
    - Keep the stored procedure for reference
 
 2. Deploy services:
-   - Start the RabbitMQ container
-   - Deploy the API service
-   - Deploy the worker service
+   - Start the Redis container
+   - Deploy the API service (`NSdocs.API`)
+   - Deploy the Flusher service (`NSdocs.Flusher`)
 
 ## Running the Application
 
@@ -59,67 +64,51 @@ To migrate from the trigger-based approach to the event-driven approach:
 - .NET 9.0 SDK
 - Docker and Docker Compose
 
-### Development Setup
+### Using Docker Compose
 
-1. Clone the repository
-2. Start the infrastructure services:
+The `docker-compose.yml` file defines the necessary infrastructure services for local development.
 
-```bash
-docker-compose up -d
-```
+1.  **Start Services**: Navigate to the project root directory in your terminal and run:
+    ```bash
+    docker-compose up -d
+    ```
+    The `-d` flag runs the containers in detached mode (in the background).
 
-This will start:
-- MySQL database on port 3306
-- RabbitMQ on port 5672 (AMQP) and 15672 (Management UI)
+2.  **Services Started**: This command will build (if necessary) and start the following services defined in `docker-compose.yml`:
+    *   `db`: A MySQL database instance, accessible on `localhost:3306`. Database name: `nsdocs_consumption`.
+    *   `redis`: A Redis instance, accessible on `localhost:6379`.
+    *   `flusher`: Replicas of the background worker service.
+    *   `api`: Replicas of the API service.
+    *   `nginx`: An Nginx load balancer distributing traffic to the API replicas, accessible on `localhost:5030`.
 
-3. Run the API:
+3.  **Stopping Services**: To stop the services, run:
+    ```bash
+    docker-compose down
+    ```
+
+### Running the .NET Applications
+
+After starting the infrastructure with Docker Compose:
+
+1.  **Run the API**:
 
 ```bash
 cd src/NSdocs.API
 dotnet run
 ```
 
-4. Run the worker (when implemented):
-
+2.  **Run the Flusher (Worker)**:
 ```bash
-cd src/NSdocs.Worker
+cd src/NSdocs.Flusher
 dotnet run
 ```
 
-### RabbitMQ Management UI
-
-The RabbitMQ Management UI is available at http://localhost:15672 with the following credentials:
-- Username: guest
-- Password: guest
-
-## Implementation Checkpoints
-
-### Checkpoint 1: Event Publishing ✅
-
-- Created event classes for document operations
-- Implemented event publishing in command handlers
-- Created stub implementations for event publishers
-
-### Checkpoint 2: Database Migration ✅
-
-- Created migration script to drop triggers
-- Kept stored procedure for reference
-
-### Checkpoint 3: Worker Service (Placeholder) ✅
-
-- Created worker project structure
-- Implemented placeholder for event consumers
-- Ready for RabbitMQ integration
-
-### Checkpoint 4: Docker Setup ✅
-
-- Added RabbitMQ to docker-compose.yml
-- Configured connection settings in appsettings.json
-- Set up networking between services
+*(Note: When running locally via `dotnet run`, you might need to adjust connection strings in `appsettings.Development.json` to point to `localhost` instead of the service names used in Docker networking, e.g., `localhost:6379` for Redis and `localhost:3306` for MySQL.)*
 
 ## Future Enhancements
 
-1. **RabbitMQ Integration**: Replace the in-memory publisher with the RabbitMQ implementation
-2. **Worker Implementation**: Implement the consumption update logic in the worker
-3. **Monitoring**: Add monitoring and logging for event processing
-4. **Error Handling**: Implement retry and dead letter handling for failed events
+1. **Refine Redis Usage**: Potentially optimize Redis usage (e.g., choosing between Pub/Sub, Streams, specific data structures).
+2. **Flusher Logic**: Enhance the processing logic within the `NSdocs.Flusher`.
+3. **Monitoring**: Add detailed monitoring and logging for Redis interactions and Flusher processing.
+4. **Error Handling**: Implement robust error handling, potentially using Redis features for retries or dead-letter queues if applicable.
+5. **Scalability Tuning**: Adjust replica counts and resource limits based on performance testing.

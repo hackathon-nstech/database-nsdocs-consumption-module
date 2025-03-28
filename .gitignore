@@ -257,3 +257,6 @@ Directory.build.props
 /src/Web/appsettings.Local.json
 /src/Web/appsettings.Local.json 
 /src/Web/appsettings.Local.json
+
+# Ignore memory bank
+memory-bank/
