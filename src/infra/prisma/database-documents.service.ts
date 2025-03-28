@@ -1,6 +1,7 @@
 import { BadRequestException, Body, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from './prisma.service';
 import { Documents } from '@prisma/client'; // Ensure Prisma types are imported
+import { UpdateCompanyConsumptionUseCase } from 'src/modules/documents/usecases/update-consumption.usecase';
 
 @Injectable()
 export class DatabaseDocumentsService {
@@ -61,7 +62,9 @@ export class DatabaseDocumentsService {
       }
   
       const createdDocument = await this.prisma.documents.create({ data: validData });
-
+      const updateCompanyConsumption = new UpdateCompanyConsumptionUseCase(this.prisma);
+      await updateCompanyConsumption.execute(createdDocument, 1);
+      
       this.logger.log(`Document created with ID: ${createdDocument.id}`)
   
       return createdDocument
