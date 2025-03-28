@@ -33,8 +33,11 @@ The logic is implemented through the interaction of the `RedisEventPublisher` an
 | :---------------- | :--------------------- | :--------------------- | :------------------ | :------------------- | :---------------- | :-------------------------------------------------------------------- |
 | **Create**        | N/A                    | +1                     | +1                  | +1                   | +1                | Increments both current count and cumulative count.                   |
 | **Update**        | No                     | 0                      | 0                   | 0                    | 0                 | No change if `CompanyId`, `Origin`, `Status` remain the same.         |
-| **Update (Old)**  | Yes                    | -1                     | -1 *(Needs Review)* | -1                   | -1 *(Needs Review)* | Decrements counts for the state the document is *leaving*.            |
-| **Update (New)**  | Yes                    | +1                     | +1                  | +1                   | +1                | Increments counts for the state the document is *entering*.           |
-| **Delete**        | N/A                    | -1                     | 0                   | -1                   | 0                 | Decrements current count only. Cumulative `total` remains unchanged. |
+| **Update (Old)**  | Yes                    | -1                     | -1                  | -1                   | -1                | Decrements counts when document leaves this state.                     |
+| **Update (New)**  | Yes                    | +1                     | +1                  | +1                   | +1                | Increments counts when document enters this state.                     |
+| **Delete**        | N/A                    | -1                     | 0                   | -1                   | 0                 | Decrements current count only. Historical total preserved.             |
 
-**Important Note on `total` during Updates:** The current implementation decrements `total` for the old state during an update. This needs review based on the precise business definition of `total`. If `total` should represent *any document ever entering this state*, then it should likely *not* be decremented when a document leaves the state via an update. If this is the case, the `RedisEventPublisher` logic for `DocumentUpdatedEvent` (Old State) needs adjustment to apply a `total` delta of 0 instead of -1.
+**Note on `total` Behavior:** 
+- During updates, the `total` counter tracks state transitions accurately by decrementing when a document leaves a state and incrementing when it enters a new state.
+- During deletes, the `total` counter is preserved to maintain historical records of how many documents have passed through each state.
+- This implementation ensures accurate tracking of both current state (`quantity`) and state transition history (`total`).

@@ -15,9 +15,9 @@ CREATE TABLE IF NOT EXISTS `documents` (
   `access_key` varchar(44) NOT NULL,
   `request_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `origin` enum('file','email','ws') NOT NULL,
-  `document_type` enum('cfe','cte','cteos','mdfe','nfce','nfe','nfse') NOT NULL,
-  `status` enum('ok','pending','error','non-existing') NOT NULL,
+  `origin` enum('file','email','ws') NOT NULL COMMENT 'Mapped from DocumentOrigin enum (File,Email,Ws)',
+  `document_type` enum('cfe','cte','cteos','mdfe','nfce','nfe','nfse') NOT NULL COMMENT 'Mapped from DocumentType enum (Cfe,Cte,Cteos,Mdfe,Nfce,Nfe,Nfse)',
+  `status` enum('ok','pending','error','non-existing') NOT NULL COMMENT 'Mapped from DocumentStatus enum (Ok,Pending,Error,NonExisting)',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE KEY `uk_access_key_company` (`access_key`,`id_company`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -48,9 +48,9 @@ CREATE TABLE IF NOT EXISTS `consumption` (
   `id` int NOT NULL AUTO_INCREMENT,
   `id_company` int NOT NULL,
   `consumption_date` date NOT NULL,
-  `origin` enum('file','email','ws') NOT NULL,
-  `document_type` enum('cfe','cte','cteos','mdfe','nfce','nfe','nfse') NOT NULL,
-  `status` enum('ok','pending','error','non-existing') NOT NULL,
+  `origin` enum('file','email','ws') NOT NULL COMMENT 'Mapped from DocumentOrigin enum (File,Email,Ws)',
+  `document_type` enum('cfe','cte','cteos','mdfe','nfce','nfe','nfse') NOT NULL COMMENT 'Mapped from DocumentType enum (Cfe,Cte,Cteos,Mdfe,Nfce,Nfe,Nfse)',
+  `status` enum('ok','pending','error','non-existing') NOT NULL COMMENT 'Mapped from DocumentStatus enum (Ok,Pending,Error,NonExisting)',
   `quantity` int NOT NULL DEFAULT 0,
   `total` int NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`) USING BTREE,
@@ -73,6 +73,44 @@ CREATE TABLE IF NOT EXISTS `consumption` (
 
 *   `PRIMARY KEY (id)`
 *   `UNIQUE KEY uk_company_type_origin_date_status (id_company, consumption_date, origin, document_type, status)`: Ensures there is only one row for each unique combination of dimensions, preventing duplicate aggregation records.
+
+## Entity Framework Core Mapping
+
+### Enum Handling
+
+Both tables use `EnumToStringConverter<T>` for mapping enum values between C# and MySQL:
+
+1. **C# to Database:**
+   - PascalCase enum values are converted to lowercase with hyphens
+   - Example: `NonExisting` → `'non-existing'`
+
+2. **Database to C#:**
+   - Database values are converted back to their corresponding enum values
+   - Example: `'non-existing'` → `NonExisting`
+
+### Example Mappings:
+
+```csharp
+// DocumentOrigin
+File → 'file'
+Email → 'email'
+Ws → 'ws'
+
+// DocumentType
+Cfe → 'cfe'
+Cte → 'cte'
+Cteos → 'cteos'
+Mdfe → 'mdfe'
+Nfce → 'nfce'
+Nfe → 'nfe'
+Nfse → 'nfse'
+
+// DocumentStatus
+Ok → 'ok'
+Pending → 'pending'
+Error → 'error'
+NonExisting → 'non-existing'
+```
 
 ## Relationships
 

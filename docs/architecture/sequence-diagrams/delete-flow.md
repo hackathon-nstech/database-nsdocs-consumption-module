@@ -39,26 +39,43 @@ sequenceDiagram
 
     Note over FlushWorker, Redis: FlushWorker runs periodically
 
-    FlushWorker->>+Redis: SPOP agg:pending_flush
+    FlushWorker->>+Redis: SRANDMEMBER agg:pending_flush
     Redis-->>-FlushWorker: {BaseKey}
     alt BaseKey found (Matches the deleted document's state)
+        FlushWorker->>+Redis: SET lock:{BaseKey}:flush {InstanceId} NX PX 60000
+        Redis-->>-FlushWorker: OK (Lock Acquired)
+        
+        Note over FlushWorker: Process Within Lock
         FlushWorker->>+Redis: GETSET {BaseKey}:quantity "0"
         Redis-->>-FlushWorker: "-1" (deltaQuantity)
         FlushWorker->>+Redis: GETSET {BaseKey}:total "0"
-        Redis-->>-FlushWorker: "0" (deltaTotal - total is not changed on delete)
-        FlushWorker->>+AppDbContext: Find Consumption record (using dimensions from BaseKey)
-        AppDbContext-->>-FlushWorker: Consumption record
+        Redis-->>-FlushWorker: "0" (total unchanged for deletes)
+
+        FlushWorker->>+AppDbContext: BEGIN TRANSACTION
+        FlushWorker->>AppDbContext: Find Consumption record (using dimensions from BaseKey)
+        AppDbContext-->>FlushWorker: Consumption record
+        
         alt Consumption Record Found
-             FlushWorker->>AppDbContext: Update record (quantity+=deltaQuantity)
-             FlushWorker->>+AppDbContext: SaveChanges()
-             AppDbContext-->>-FlushWorker: Success
-             FlushWorker->>+Redis: SREM agg:pending_flush {BaseKey}
-             Redis-->>-FlushWorker: OK
-        else Consumption Record Not Found (Should not happen if created correctly)
-             FlushWorker->>FlushWorker: Log Warning: Consumption record not found for delete flush.
-             FlushWorker->>+Redis: SREM agg:pending_flush {BaseKey}  // Remove key to prevent reprocessing
-             Redis-->>-FlushWorker: OK
+            FlushWorker->>AppDbContext: Update record (quantity += deltaQuantity)
+            FlushWorker->>AppDbContext: SaveChanges()
+            alt SaveChanges Success
+                FlushWorker->>AppDbContext: COMMIT
+                FlushWorker->>+Redis: SREM agg:pending_flush {BaseKey}
+                Redis-->>-FlushWorker: OK
+            else SaveChanges Failed
+                FlushWorker->>AppDbContext: ROLLBACK
+                FlushWorker->>+Redis: INCRBY {BaseKey}:quantity -deltaQuantity
+                Redis-->>-FlushWorker: OK
+            end
+        else Consumption Record Not Found
+            FlushWorker->>FlushWorker: Log Error: Missing consumption record
+            FlushWorker->>AppDbContext: ROLLBACK
+            FlushWorker->>+Redis: SREM agg:pending_flush {BaseKey}
+            Redis-->>-FlushWorker: OK
         end
+
+        FlushWorker->>+Redis: DEL lock:{BaseKey}:flush
+        Redis-->>-FlushWorker: OK (Lock Released)
     end
 
 ```

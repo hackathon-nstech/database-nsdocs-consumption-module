@@ -50,7 +50,7 @@ Updates are handled differently depending on whether the fields defining the con
         *   **Old State:**
             *   Identifies the Base Key for the *previous* state.
             *   Decrements `{PreviousBaseKey}:quantity` by 1.
-            *   Decrements `{PreviousBaseKey}:total` by 1. *(Correction: Total should likely NOT be decremented here, needs review)*
+            *   Decrements `{PreviousBaseKey}:total` by 1.
             *   Adds the Previous Base Key to `agg:pending_flush`.
         *   **New State:**
             *   Identifies the Base Key for the *new* state.
@@ -58,7 +58,7 @@ Updates are handled differently depending on whether the fields defining the con
             *   Increments `{NewBaseKey}:total` by 1.
             *   Adds the New Base Key to `agg:pending_flush`.
     *   **FlushWorker:**
-        *   Processes the Previous Base Key: Reads/resets Redis (-1, -1), updates DB `consumption` record (`quantity -= 1`, `total -= 1`). *(Correction needed for total)*
+        *   Processes the Previous Base Key: Reads/resets Redis (-1, -1), updates DB `consumption` record (`quantity -= 1`, `total -= 1`).
         *   Processes the New Base Key: Reads/resets Redis (+1, +1), updates DB `consumption` record (`quantity += 1`, `total += 1`).
 
 ### 3. Document Deletion (`DocumentDeletedEvent`)
@@ -67,13 +67,13 @@ Updates are handled differently depending on whether the fields defining the con
 *   **RedisEventPublisher:**
     *   Identifies the Base Key corresponding to the deleted document's state.
     *   Decrements `{BaseKey}:quantity` by 1.
-    *   *Does not change* `{BaseKey}:total`.
+    *   *Does not change* `{BaseKey}:total` (preserving historical count).
     *   Adds the Base Key to the `agg:pending_flush` set.
 *   **FlushWorker:**
     *   Picks up the Base Key from the set.
-    *   Reads and resets the Redis counters (-1, 0).
+    *   Reads and resets the Redis counters (-1 for quantity, total unchanged).
     *   Finds the corresponding `consumption` record in the database.
-    *   Applies the deltas: `quantity = quantity - 1`. `total` remains unchanged.
+    *   Applies the quantity delta: `quantity = quantity - 1` (total remains unchanged).
 
 ## Example Scenarios (Illustrative)
 
@@ -92,4 +92,4 @@ Updates are handled differently depending on whether the fields defining the con
 *   Event Publisher -> Redis (INCR/SADD)
 *   FlushWorker -> Redis (SPOP/GETSET/SREM) -> DB Save (Update/Insert)
 
-*(Note: Includes correction placeholders for the 'total' counter logic during updates, which needs further review based on business requirements.)*
+*(Note: This document reflects the current implementation where the total counter tracks state transitions and is decremented when a document leaves a state during updates, but remains unchanged during deletions to preserve historical counts.)*

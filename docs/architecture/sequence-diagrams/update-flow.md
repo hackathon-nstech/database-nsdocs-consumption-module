@@ -24,7 +24,7 @@ sequenceDiagram
     Note right of RedisEventPublisher: Processing Old State
     RedisEventPublisher->>+Redis: INCR {PreviousBaseKey}:quantity (by -1)
     Redis->>-RedisEventPublisher: OK
-    RedisEventPublisher->>+Redis: INCR {PreviousBaseKey}:total (by -1) *(Review Needed)*
+    RedisEventPublisher->>+Redis: INCR {PreviousBaseKey}:total (by -1)
     Redis->>-RedisEventPublisher: OK
     RedisEventPublisher->>+Redis: SADD agg:pending_flush {PreviousBaseKey}
     Redis->>-RedisEventPublisher: OK
@@ -50,7 +50,7 @@ sequenceDiagram
             FlushWorker->>+Redis: GETSET {PreviousBaseKey}:quantity "0"
             Redis-->>-FlushWorker: "-1" (deltaQuantity)
             FlushWorker->>+Redis: GETSET {PreviousBaseKey}:total "0"
-            Redis-->>-FlushWorker: "-1" (deltaTotal) *(Review Needed)*
+            Redis-->>-FlushWorker: "-1" (deltaTotal)
             FlushWorker->>+AppDbContext: Find Consumption record (using dimensions from PreviousBaseKey)
             AppDbContext-->>-FlushWorker: Consumption record
             FlushWorker->>AppDbContext: Update record (quantity+=deltaQuantity, total+=deltaTotal)
@@ -79,4 +79,4 @@ sequenceDiagram
 
 *   `{PreviousBaseKey}`: Represents the aggregation key for the document's state *before* the update.
 *   `{NewBaseKey}`: Represents the aggregation key for the document's state *after* the update.
-*   *(Review Needed)*: Indicates the logic for the `total` counter during updates needs confirmation based on business rules.
+*   Note: The total counter is decremented for the old state and incremented for the new state during updates, tracking state transitions accurately.

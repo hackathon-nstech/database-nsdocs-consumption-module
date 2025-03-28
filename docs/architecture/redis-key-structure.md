@@ -37,8 +37,8 @@ Derived from the Base Key, these store the actual delta values.
 *   **Total:** `{BaseKey}:total`
     *   Stores the net change (+/-) in the cumulative count of documents that have *ever* entered the state defined by the Base Key since the last flush.
     *   Incremented (+1) on create/update-new.
-    *   *(Review Needed)* Currently decremented (-1) on update-old. Should likely *not* be decremented.
-    *   *Not* changed on delete.
+    *   Decremented (-1) on update-old to maintain accurate state transitions.
+    *   *Not* changed on delete (historical total remains unchanged).
     *   Value is read and reset to 0 by the `FlushWorker`.
     *   **Example:** `agg:company:227:2025-03-28:ws:nfe:ok:total`
 

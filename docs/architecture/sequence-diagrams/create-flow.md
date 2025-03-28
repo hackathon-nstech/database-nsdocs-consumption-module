@@ -31,21 +31,41 @@ sequenceDiagram
 
     Note over FlushWorker, Redis: FlushWorker runs periodically
 
-    FlushWorker->>+Redis: SPOP agg:pending_flush
+    FlushWorker->>+Redis: SRANDMEMBER agg:pending_flush
     Redis-->>-FlushWorker: {BaseKey}
     alt BaseKey found
+        FlushWorker->>+Redis: SET lock:{BaseKey}:flush {InstanceId} NX PX 60000
+        Redis-->>-FlushWorker: OK (Lock Acquired)
+        
+        Note over FlushWorker: Process Within Lock
         FlushWorker->>+Redis: GETSET {BaseKey}:quantity "0"
         Redis-->>-FlushWorker: "1" (deltaQuantity)
         FlushWorker->>+Redis: GETSET {BaseKey}:total "0"
         Redis-->>-FlushWorker: "1" (deltaTotal)
-        FlushWorker->>+AppDbContext: Find or Create Consumption record (using dimensions from BaseKey)
-        AppDbContext-->>-FlushWorker: Consumption record
+
+        FlushWorker->>+AppDbContext: BEGIN TRANSACTION
+        FlushWorker->>AppDbContext: Find or Create Consumption record (using dimensions from BaseKey)
+        AppDbContext-->>FlushWorker: Consumption record
+        
         FlushWorker->>AppDbContext: Update record (quantity+=deltaQuantity, total+=deltaTotal)
-        FlushWorker->>+AppDbContext: SaveChanges()
-        AppDbContext-->>-FlushWorker: Success
-        FlushWorker->>+Redis: SREM agg:pending_flush {BaseKey} (Only if DB succeeded)
-        Redis-->>-FlushWorker: OK
+        FlushWorker->>AppDbContext: SaveChanges()
+        alt SaveChanges Success
+            FlushWorker->>AppDbContext: COMMIT
+            FlushWorker->>+Redis: SREM agg:pending_flush {BaseKey}
+            Redis-->>-FlushWorker: OK
+        else SaveChanges Failed
+            FlushWorker->>AppDbContext: ROLLBACK
+            Note over FlushWorker: Revert Redis Changes
+            FlushWorker->>+Redis: INCRBY {BaseKey}:quantity -deltaQuantity
+            Redis-->>-FlushWorker: OK
+            FlushWorker->>+Redis: INCRBY {BaseKey}:total -deltaTotal
+            Redis-->>-FlushWorker: OK
+        end
+
+        FlushWorker->>+Redis: DEL lock:{BaseKey}:flush
+        Redis-->>-FlushWorker: OK (Lock Released)
     end
+
 ```
 
 **Key:**
