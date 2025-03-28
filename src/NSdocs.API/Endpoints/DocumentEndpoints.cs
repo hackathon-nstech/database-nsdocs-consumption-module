@@ -32,11 +32,7 @@ public static class DocumentEndpoints
 
         app.MapPut("/api/documents/{id}", async (long id, UpdateDocumentCommand command, IMediator mediator) =>
         {
-            if (id != command.Id)
-            {
-                return Results.BadRequest("ID in URL does not match ID in request body");
-            }
-            
+            command.Id = id;
             var result = await mediator.Send(command);
             
             if (!result)

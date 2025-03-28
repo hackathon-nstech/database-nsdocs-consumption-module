@@ -17,9 +17,9 @@ public class UpdateDocumentCommandValidator : AbstractValidator<UpdateDocumentCo
             
         RuleFor(x => x.AccessKey)
             .NotEmpty()
-            .WithMessage("Access key is required")
-            .Length(44)
-            .WithMessage("Access key must be exactly 44 characters");
+            .WithMessage("Access key is required");
+            // .Length(44)
+            // .WithMessage("Access key must be exactly 44 characters");
             
         RuleFor(x => x.Origin)
             .IsInEnum()

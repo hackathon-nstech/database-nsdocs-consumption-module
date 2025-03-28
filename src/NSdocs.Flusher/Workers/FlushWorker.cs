@@ -4,60 +4,63 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration; // Added for InstanceId
-using Microsoft.Extensions.DependencyInjection; // Added for IServiceScopeFactory usage
-using Microsoft.Extensions.Hosting; // Added for BackgroundService
-using Microsoft.Extensions.Logging; // Added for ILogger
+using System.Globalization; // For DateOnly parsing
+using System.Text.RegularExpressions; // For key parsing
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NSdocs.Application.Common.Interfaces;
+using NSdocs.Domain.Entities; // Added for Consumption entity
+using NSdocs.Domain.Enums; // Added for Enums
 using NSdocs.Infrastructure.Configuration;
-using NSdocs.Infrastructure.Services; // Assuming Redis services are here
+using NSdocs.Infrastructure.Services;
 using StackExchange.Redis;
 
 namespace NSdocs.Flusher.Workers;
 
 public class FlushWorker : BackgroundService
 {
+    private const string PendingFlushSetKey = "agg:pending_flush";
     private readonly ILogger<FlushWorker> _logger;
     private readonly IServiceScopeFactory _scopeFactory;
-    private readonly IRedisConnectionFactory _redisFactory; // Keep for direct delta access
-    private readonly IWorkDistributor _workDistributor;
+    private readonly IRedisConnectionFactory _redisFactory;
     private readonly IRedisLockManager _lockManager;
     private readonly string _instanceId;
     private readonly RedisSettings _redisSettings;
-    private readonly TimeSpan _companyLockExpiry = TimeSpan.FromMinutes(1); // How long to lock a company for processing
+    private readonly TimeSpan _baseKeyLockExpiry = TimeSpan.FromMinutes(1); // How long to lock a base key for processing
 
     public FlushWorker(
         ILogger<FlushWorker> logger,
         IServiceScopeFactory scopeFactory,
         IRedisConnectionFactory redisFactory,
-        IWorkDistributor workDistributor, // Injected
-        IRedisLockManager lockManager,     // Injected
-        IConfiguration configuration,      // Injected for InstanceId
+        // IWorkDistributor workDistributor, // Removed
+        IRedisLockManager lockManager,
+        IConfiguration configuration,
         IOptions<RedisSettings> redisSettings)
     {
         _logger = logger;
         _scopeFactory = scopeFactory;
         _redisFactory = redisFactory;
-        _workDistributor = workDistributor;
+        // _workDistributor = workDistributor; // Removed
         _lockManager = lockManager;
         _redisSettings = redisSettings.Value;
-        // TODO: Ensure InstanceId configuration is robust
-        _instanceId = configuration["InstanceId"] ?? Guid.NewGuid().ToString("N"); 
+        _instanceId = configuration["InstanceId"] ?? Guid.NewGuid().ToString("N");
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("FlushWorker starting for instance {InstanceId} at: {Time}", _instanceId, DateTimeOffset.Now);
 
-        // Register instance and get initial work assignment (handled within ProcessPendingUpdates)
-        
+        // No instance registration needed here anymore as work distribution is removed
+
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                // Process companies assigned to this instance
-                await ProcessAssignedUpdates(stoppingToken);
+                // Process keys from the pending flush set
+                await ProcessPendingFlushSet(stoppingToken);
             }
             catch (OperationCanceledException)
             {
@@ -85,156 +88,159 @@ public class FlushWorker : BackgroundService
         _logger.LogInformation("FlushWorker {InstanceId} finished execution.", _instanceId);
     }
 
-    public override async Task StopAsync(CancellationToken cancellationToken)
+    // Removed StopAsync override related to IWorkDistributor
+
+    private async Task ProcessPendingFlushSet(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("FlushWorker {InstanceId} stopping...", _instanceId);
-        try
-        {
-            // Release assigned work before shutting down
-            await _workDistributor.ReleaseWorkAsync(cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "FlushWorker {InstanceId}: Error releasing work during shutdown.", _instanceId);
-        }
-        await base.StopAsync(cancellationToken);
-        _logger.LogInformation("FlushWorker {InstanceId} stopped.", _instanceId);
-    }
+        var redis = _redisFactory.GetDatabase();
+        _logger.LogDebug("FlushWorker {InstanceId}: Checking for pending updates in {SetKey}.", _instanceId, PendingFlushSetKey);
 
-    private async Task ProcessAssignedUpdates(CancellationToken stoppingToken)
-    {
-        ISet<int> assignedCompanyIds;
-        try
-        {
-            // Get companies assigned to this instance by the distributor
-            assignedCompanyIds = await _workDistributor.GetAssignedWorkAsync(stoppingToken);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "FlushWorker {InstanceId}: Failed to get assigned work.", _instanceId);
-            return; // Cannot proceed without work assignment
-        }
+        // Process keys one by one using SRANDMEMBER + SREM for safety
+        // Consider adding a limit to how many keys are processed per cycle to avoid long runs
+        int processedCount = 0;
+        int maxProcessPerCycle = 1000; // Configurable limit
 
-        if (!assignedCompanyIds.Any())
+        while (!stoppingToken.IsCancellationRequested && processedCount < maxProcessPerCycle)
         {
-            _logger.LogDebug("FlushWorker {InstanceId}: No companies assigned in this cycle.", _instanceId);
-            return;
-        }
+            RedisValue baseKeyValue = await redis.SetRandomMemberAsync(PendingFlushSetKey);
 
-        _logger.LogInformation("FlushWorker {InstanceId}: Processing updates for {Count} assigned companies.", _instanceId, assignedCompanyIds.Count);
-        var redis = _redisFactory.GetDatabase(); // Get DB connection once per cycle
+            if (baseKeyValue.IsNullOrEmpty)
+            {
+                _logger.LogTrace("FlushWorker {InstanceId}: No more keys found in {SetKey}.", _instanceId, PendingFlushSetKey);
+                break; // No more keys in the set
+            }
 
-        foreach (var companyId in assignedCompanyIds)
-        {
-            if (stoppingToken.IsCancellationRequested) break;
-
-            var lockKey = $"lock:company:{companyId}:flush";
+            string baseKey = baseKeyValue.ToString();
+            string lockKey = $"lock:{baseKey}:flush"; // Lock based on the specific aggregation key
             bool lockAcquired = false;
-            
+            int quantityDelta = 0;
+            int totalDelta = 0;
+
             try
             {
-                // Try to acquire lock for the company
-                lockAcquired = await _lockManager.AcquireLockAsync(lockKey, _instanceId, _companyLockExpiry, stoppingToken);
+                lockAcquired = await _lockManager.AcquireLockAsync(lockKey, _instanceId, _baseKeyLockExpiry, stoppingToken);
 
                 if (!lockAcquired)
                 {
-                    _logger.LogDebug("FlushWorker {InstanceId}: Could not acquire lock for company {CompanyId}, likely processed by another instance.", _instanceId, companyId);
-                    continue; // Skip if lock not acquired
+                    _logger.LogDebug("FlushWorker {InstanceId}: Could not acquire lock for key {BaseKey}, likely processed by another instance.", _instanceId, baseKey);
+                    // Don't increment processedCount, just try another key
+                    await Task.Delay(50, stoppingToken); // Small delay to prevent tight loop on contention
+                    continue;
                 }
 
-                _logger.LogDebug("FlushWorker {InstanceId}: Acquired lock for company {CompanyId}.", _instanceId, companyId);
+                _logger.LogDebug("FlushWorker {InstanceId}: Acquired lock for key {BaseKey}.", _instanceId, baseKey);
+                processedCount++; // Increment count as we are processing this key
 
                 // --- Processing Logic (within lock) ---
-                using var scope = _scopeFactory.CreateScope();
-                var dbContext = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
-                int quantityDelta = 0;
-                int totalDelta = 0;
                 bool success = false;
-
                 try
                 {
-                    // Atomically get and reset both deltas
-                    var quantityTask = redis.StringGetSetAsync($"agg:company:{companyId}:quantity", "0");
-                    var totalTask = redis.StringGetSetAsync($"agg:company:{companyId}:total", "0");
-                    await Task.WhenAll(quantityTask, totalTask);
-
-                    var quantity = await quantityTask;
-                    var total = await totalTask;
-
-                    // Check if there are any deltas to process
-                    if ((!quantity.HasValue || quantity == "0") && (!total.HasValue || total == "0"))
+                    // 1. Parse dimensions from baseKey
+                    var (parseSuccess, companyId, consumptionDate, origin, docType, status) = ParseBaseKey(baseKey);
+                    if (!parseSuccess)
                     {
-                        _logger.LogTrace("FlushWorker {InstanceId}: No deltas found for company {CompanyId}.", _instanceId, companyId);
-                        // Remove from pending set if no deltas exist anymore
-                        // Corrected: Use the actual key string "agg:companies"
-                        await redis.SetRemoveAsync("agg:companies", companyId.ToString()); 
-                        success = true; // Mark as success to release lock without reverting
-                        continue; 
+                        _logger.LogError("FlushWorker {InstanceId}: Failed to parse base key {BaseKey}. Removing from set.", _instanceId, baseKey);
+                        await redis.SetRemoveAsync(PendingFlushSetKey, baseKey); // Remove invalid key
+                        success = true; // Mark as success to release lock without revert
+                        continue;
                     }
 
-                    // TryParse deltas
-                    _ = int.TryParse(quantity.ToString(), out quantityDelta);
-                    _ = int.TryParse(total.ToString(), out totalDelta);
+                    // 2. Atomically get and reset granular deltas
+                    var quantityKey = $"{baseKey}:quantity";
+                    var totalKey = $"{baseKey}:total";
+                    var quantityTask = redis.StringGetSetAsync(quantityKey, "0");
+                    var totalTask = redis.StringGetSetAsync(totalKey, "0");
+                    await Task.WhenAll(quantityTask, totalTask);
+
+                    var quantityVal = await quantityTask;
+                    var totalVal = await totalTask;
+
+                    _ = int.TryParse(quantityVal.ToString(), out quantityDelta);
+                    _ = int.TryParse(totalVal.ToString(), out totalDelta);
 
                     if (quantityDelta == 0 && totalDelta == 0)
                     {
-                         _logger.LogTrace("FlushWorker {InstanceId}: Zero deltas after parse for company {CompanyId}.", _instanceId, companyId);
-                         await redis.SetRemoveAsync("agg:companies", companyId.ToString()); 
-                         success = true;
-                         continue;
+                        _logger.LogTrace("FlushWorker {InstanceId}: Zero deltas found for key {BaseKey}. Removing from set.", _instanceId, baseKey);
+                        await redis.SetRemoveAsync(PendingFlushSetKey, baseKey);
+                        success = true;
+                        continue;
                     }
 
-                    // Update consumption in database
-                    // TODO: Need to handle potential race condition if consumption record is created between check and update
-                    // Consider using raw SQL with INSERT ... ON DUPLICATE KEY UPDATE or similar
+                    // 3. Update Database
+                    using var scope = _scopeFactory.CreateScope();
+                    var dbContext = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+
+                    // Convert DateOnly to DateTime (start of day) for comparison
+                    var consumptionDateTime = consumptionDate.ToDateTime(TimeOnly.MinValue);
+
                     var consumption = await dbContext.Consumptions
-                        .Where(c => c.CompanyId == companyId) // Assuming CompanyId is int
-                        .FirstOrDefaultAsync(stoppingToken);
+                        .FirstOrDefaultAsync(c =>
+                            c.CompanyId == companyId &&
+                            c.ConsumptionDate == consumptionDateTime && // Compare DateTime with DateTime
+                            c.Origin == origin &&
+                            c.DocumentType == docType &&
+                            c.Status == status,
+                            stoppingToken);
 
                     if (consumption == null)
                     {
-                        // This case needs careful handling. If the record doesn't exist, should we create it?
-                        // Or does the delta imply it should exist? For now, log warning.
-                        _logger.LogWarning("FlushWorker {InstanceId}: No consumption record found for company {CompanyId}. Deltas (Q:{Quantity}, T:{Total}) will be lost if not reverted.", _instanceId, companyId, quantityDelta, totalDelta);
-                        // Decide on revert strategy - for now, we revert below if success is false
+                        // Create new record
+                        // Convert DateOnly to DateTime (start of day) for the entity
+                        consumption = new Consumption
+                        {
+                            CompanyId = companyId,
+                            ConsumptionDate = consumptionDate.ToDateTime(TimeOnly.MinValue), // Assign DateTime
+                            Origin = origin,
+                            DocumentType = docType,
+                            Status = status,
+                            Quantity = quantityDelta,
+                            Total = totalDelta
+                        };
+                        dbContext.Consumptions.Add(consumption);
+                        _logger.LogDebug("FlushWorker {InstanceId}: Creating new consumption record for key {BaseKey}.", _instanceId, baseKey);
                     }
                     else
                     {
+                        // Update existing record
                         consumption.Quantity += quantityDelta;
                         consumption.Total += totalDelta;
-                        await dbContext.SaveChangesAsync(stoppingToken);
-                        success = true; // Mark as success
-                        
-                        // Remove from pending set ONLY after successful DB update
-                        await redis.SetRemoveAsync("agg:companies", companyId.ToString()); 
-
-                        _logger.LogInformation(
-                            "FlushWorker {InstanceId}: Successfully applied deltas (Quantity: {Quantity}, Total: {Total}) for company {CompanyId}", 
-                            _instanceId, quantityDelta, totalDelta, companyId);
+                        _logger.LogDebug("FlushWorker {InstanceId}: Updating existing consumption record for key {BaseKey}.", _instanceId, baseKey);
                     }
+
+                    await dbContext.SaveChangesAsync(stoppingToken);
+                    success = true; // DB update successful
+
+                    // 4. Remove base key from set ONLY after successful DB update
+                    await redis.SetRemoveAsync(PendingFlushSetKey, baseKey);
+
+                    _logger.LogInformation(
+                        "FlushWorker {InstanceId}: Successfully applied deltas (Q: {Quantity}, T: {Total}) for key {BaseKey}",
+                        _instanceId, quantityDelta, totalDelta, baseKey);
+
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "FlushWorker {InstanceId}: Error processing updates for company {CompanyId} within lock.", _instanceId, companyId);
+                    _logger.LogError(ex, "FlushWorker {InstanceId}: Error processing updates for key {BaseKey} within lock.", _instanceId, baseKey);
                     success = false; // Ensure revert happens
                 }
                 finally
                 {
-                     // Revert Redis deltas if DB update failed
+                    // 5. Revert Redis deltas if DB update failed
                     if (!success)
                     {
-                        _logger.LogWarning("FlushWorker {InstanceId}: Reverting Redis deltas for company {CompanyId} due to processing failure.", _instanceId, companyId);
-                        if (quantityDelta != 0) await redis.StringIncrementAsync($"agg:company:{companyId}:quantity", quantityDelta);
-                        if (totalDelta != 0) await redis.StringIncrementAsync($"agg:company:{companyId}:total", totalDelta);
+                        _logger.LogWarning("FlushWorker {InstanceId}: Reverting Redis deltas for key {BaseKey} due to processing failure.", _instanceId, baseKey);
+                        // Use INCRBY to revert
+                        if (quantityDelta != 0) await redis.StringIncrementAsync($"{baseKey}:quantity", -quantityDelta);
+                        if (totalDelta != 0) await redis.StringIncrementAsync($"{baseKey}:total", -totalDelta);
+                        // Do NOT remove from PendingFlushSetKey here, let it be retried later
                     }
                 }
                 // --- End Processing Logic (within lock) ---
-
             }
             catch (Exception ex)
             {
-                 _logger.LogError(ex, "FlushWorker {InstanceId}: Error during lock acquisition or outer processing for company {CompanyId}.", _instanceId, companyId);
-                 // Lock might not have been acquired or released properly, potential issue here.
+                _logger.LogError(ex, "FlushWorker {InstanceId}: Error during lock acquisition or outer processing for key {BaseKey}.", _instanceId, baseKey);
+                // Lock might not have been acquired or released properly.
             }
             finally
             {
@@ -242,9 +248,76 @@ public class FlushWorker : BackgroundService
                 if (lockAcquired)
                 {
                     await _lockManager.ReleaseLockAsync(lockKey, _instanceId, stoppingToken);
-                     _logger.LogDebug("FlushWorker {InstanceId}: Released lock for company {CompanyId}.", _instanceId, companyId);
+                    _logger.LogDebug("FlushWorker {InstanceId}: Released lock for key {BaseKey}.", _instanceId, baseKey);
                 }
             }
-        } // End foreach company
-    } // End ProcessAssignedUpdates
+        } // End while loop processing keys
+
+        if (processedCount > 0)
+        {
+             _logger.LogInformation("FlushWorker {InstanceId}: Processed {Count} keys in this cycle.", _instanceId, processedCount);
+        }
+    }
+
+    // Helper to parse the base key: "agg:company:{companyId}:{date}:{origin}:{type}:{status}"
+    private (bool Success, int CompanyId, DateOnly ConsumptionDate, DocumentOrigin Origin, DocumentType DocType, DocumentStatus Status) ParseBaseKey(string baseKey)
+    {
+        // Example: agg:company:123:2025-03-28:file:nfe:ok
+        var parts = baseKey.Split(':');
+        if (parts.Length != 7 || parts[0] != "agg" || parts[1] != "company")
+        {
+            return (false, 0, default, default, default, default);
+        }
+
+        if (!int.TryParse(parts[2], out var companyId)) return (false, 0, default, default, default, default);
+        if (!DateOnly.TryParseExact(parts[3], "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var consumptionDate)) return (false, 0, default, default, default, default);
+        if (!TryParseEnum<DocumentOrigin>(parts[4], out var origin)) return (false, 0, default, default, default, default);
+        if (!TryParseEnum<DocumentType>(parts[5], out var docType)) return (false, 0, default, default, default, default);
+        if (!TryParseEnum<DocumentStatus>(parts[6], out var status)) return (false, 0, default, default, default, default);
+
+        return (true, companyId, consumptionDate, origin, docType, status);
+    }
+
+    // Helper to parse kebab-case string back to Enum
+    private static bool TryParseEnum<TEnum>(string value, out TEnum result) where TEnum : struct, Enum
+    {
+        // Convert kebab-case back to PascalCase for Enum.TryParse
+        // Simple approach: remove hyphens, capitalize first letter, then try parse ignoring case
+        // Example: "nfe" -> "Nfe", "document-type" -> "DocumentType"
+        // This might not be perfect for all cases but covers simple ones.
+        // A more robust approach might involve mapping if needed.
+
+        // Let's assume the publisher used ToLowerInvariant for acronyms (nfe) and hyphenated for others (document-status)
+        // We need to handle both back to PascalCase
+
+        string pascalCaseValue;
+        if (!value.Contains('-'))
+        {
+             // Assume acronym like "nfe", just capitalize first letter? No, Enum.TryParse ignores case.
+             // Let's rely on IgnoreCase parsing.
+             pascalCaseValue = value; // Keep as is, rely on IgnoreCase
+        }
+        else
+        {
+            // Handle kebab-case like "document-status"
+            var parts = value.Split('-');
+            pascalCaseValue = string.Concat(parts.Select(p => char.ToUpperInvariant(p[0]) + p.Substring(1)));
+        }
+
+        // Use Enum.TryParse with ignoreCase: true
+        if (Enum.TryParse<TEnum>(pascalCaseValue, ignoreCase: true, out result))
+        {
+            return true;
+        }
+
+        // Fallback: Try direct match (if kebab-case somehow matches enum name directly)
+        if (Enum.TryParse<TEnum>(value, ignoreCase: true, out result))
+        {
+             return true;
+        }
+
+        // Log failure?
+        // Console.WriteLine($"Failed to parse '{value}' (tried '{pascalCaseValue}') as {typeof(TEnum).Name}");
+        return false;
+    }
 }

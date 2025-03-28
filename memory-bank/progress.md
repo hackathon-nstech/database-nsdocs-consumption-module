@@ -30,7 +30,7 @@
 5. **Event Publishing**
    - Document event classes created
    - Event publishing implemented in command handlers
-   - In-memory event publisher implemented
+   - In-memory event publisher implemented (Initial version)
 
 6. **Database Migration**
    - Migration script created to drop triggers
@@ -69,7 +69,7 @@
   - [ ] Test failure scenarios (Pending)
 
 #### 4. Flusher Service ✅
-- [x] Update FlushWorker
+- [x] Update FlushWorker (Initial version with simple aggregation)
   - [x] Add instance registration (via WorkDistributor)
   - [x] Implement coordination (Get assigned work, lock companies)
   - [x] Add graceful shutdown (Release work)
@@ -85,25 +85,44 @@
   - [x] Pass HOSTNAME environment variable
 - [x] Create Flusher Dockerfile
 
-### Next Phase: Testing & Refinement
+### Completed Phase: Redis Aggregation Refinement ✅
 
-## Testing Progress
+#### 1. RedisEventPublisher Update ✅
+- [x] Modify `PublishAsync` to use granular keys (`agg:company:{id}:{date}:{origin}:{type}:{status}:quantity/total`).
+- [x] Extract dimensions from `DocumentEventBase` (Used current UTC date).
+- [x] Ensure consistent date/enum formatting in keys (yyyy-MM-dd, kebab-case).
+- [x] Add logic to `SADD` the base key to `agg:pending_flush` set.
+
+#### 2. FlushWorker Update ✅
+- [x] Modify `ProcessPendingFlushSet` (renamed from `ProcessAssignedUpdates`) to process keys from `agg:pending_flush`.
+- [x] Implement logic to fetch base keys from the set (using `SRANDMEMBER`+`SREM`).
+- [x] Implement locking on the *base key*.
+- [x] Implement parsing of dimensions from the base key string.
+- [x] Modify DB logic to Find-Or-Create `Consumption` record using all dimensions (handling `DateOnly`/`DateTime`).
+- [x] Adjust error handling/revert logic for the new flow.
+- [x] Remove processed base key from `agg:pending_flush` on DB success.
+- [x] Removed dependency on `IWorkDistributor`.
+
+### Next Phase: Testing & Refinement (Current)
+
+## Testing Progress (Post-Refinement)
 
 ### Unit Tests (Pending)
 - [ ] RedisLockManager tests
 - [ ] WorkDistributor tests
 - [ ] HealthMonitor tests
-- [ ] FlushWorker tests
+- [ ] FlushWorker tests (Updated for new logic)
+- [ ] RedisEventPublisher tests (Updated for new logic)
 
-### Integration Tests
+### Integration Tests (Pending)
 - [ ] Multi-instance testing
 - [ ] Failover scenarios
 - [ ] Scaling operations
-- [ ] Data consistency checks
+- [ ] Data consistency checks (including record creation)
 
-### Performance Tests
-- [ ] Lock contention
-- [ ] Work distribution
+### Performance Tests (Pending)
+- [ ] Lock contention (base key locks)
+- [ ] Work distribution (if changed)
 - [ ] Failover timing
 - [ ] Scale-out performance
 
@@ -111,12 +130,12 @@
 
 ```mermaid
 pie title Implementation Progress
-    "Completed" : 75
-    "Testing Pending" : 25
+    "Coordination & Aggregation Done" : 85
+    "Testing Pending" : 15
 ```
 
 ```mermaid
-pie title Test Coverage (Pending)
+pie title Test Coverage (Current)
     "Unit Tests" : 0
     "Integration Tests" : 0
     "Performance Tests" : 0
@@ -128,24 +147,27 @@ pie title Test Coverage (Pending)
 gantt
     title Implementation Timeline (Updated)
     dateFormat YYYY-MM-DD
-    
+
     section RabbitMQ Cleanup
     Remove Dependencies :done, 2025-03-27, 1d
-    
+
     section Redis Coordination Implementation
-    Lock Management :done, 2025-03-28, 1d 
+    Lock Management :done, 2025-03-28, 1d
     Work Distribution :done, 2025-03-28, 1d
     Health Monitoring :done, 2025-03-28, 1d
     Flusher Integration :done, 2025-03-28, 1d
     Config & Deployment :done, 2025-03-28, 1d
-    
-    section Testing (Next)
+
+    section Redis Aggregation Refinement (Completed)
+    Publisher & Worker Updates :done, 2025-03-28, 1d
+
+    section Testing (Current)
     Unit Tests :crit, active, 2025-03-29, 3d
-    Integration Tests :2025-04-01, 3d
-    Performance Tests :2025-04-13, 2025-04-15
+    Integration Tests :2025-04-03, 3d
+    Performance Tests :2025-04-06, 3d
 ```
 
-## Success Metrics
+## Success Metrics (Updated for Creation)
 
 ### API Performance
 - Response time < 200ms
@@ -159,7 +181,7 @@ gantt
 - Sub-second failover
 
 ### Data Consistency
-- Accurate consumption tracking
-- Proper total calculations
+- Accurate consumption tracking (Updates and Creation)
+- Proper total calculations per dimension
 - Consistent state across Redis and database
-- No duplicate processing
+- No duplicate processing or lost updates
