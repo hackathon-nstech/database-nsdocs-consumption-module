@@ -1,8 +1,6 @@
 import { BadRequestException, Body, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from './prisma.service';
-import { UpdateCompanyConsumption } from '../../modules/documents/update-company-consumption.class';
-import { UpdateConsumption } from '../../modules/documents/update-consumption.class';
-import { Documents, Prisma } from '@prisma/client'; // Ensure Prisma types are imported
+import { Documents } from '@prisma/client'; // Ensure Prisma types are imported
 
 @Injectable()
 export class DatabaseDocumentsService {
