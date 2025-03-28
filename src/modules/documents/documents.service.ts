@@ -1,16 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../infra/prisma/prisma.service';
-import { DatabaseProceduresService } from '../../infra/prisma/database-procedures.service';
 import { Documents } from '@prisma/client';
-import { UpdateCompanyConsumption } from './update-company-consumption.class'; // Corrigido para o caminho correto
+import { UpdateCompanyConsumptionUseCase } from './usecases/update-consumption.usecase';
 
 @Injectable()
 export class DocumentsService {
   private readonly logger = new Logger(DocumentsService.name);
 
   constructor(
-    private readonly prisma: PrismaService,
-    private readonly proceduresService: DatabaseProceduresService,
+    private readonly prisma: PrismaService
   ) {}
 
   async findAll(): Promise<Documents[]> {
@@ -35,62 +33,55 @@ export class DocumentsService {
   }
 
   async create(data: Omit<Documents, 'id'>): Promise<Documents> {
-    const document = await this.prisma.documents.create({ data });
-    // await this.proceduresService.triggerAfterInsert(
-    //   document.id_company,
-    //   document.request_date,
-    //   document.origin,
-    //   document.document_type,
-    //   document.status === 'non_existing' ? 'non-existing' : document.status,
-    // );
-    return document;
+    return this.prisma.$transaction(async (prisma) => {
+      const document = await prisma.documents.create({ data });
+
+      const updateCompanyConsumption = new UpdateCompanyConsumptionUseCase(prisma);
+      await updateCompanyConsumption.execute(document, 1);
+
+      return document;
+    });
   }
 
   async update(id: bigint, data: Partial<Documents>): Promise<Documents> {
-    const oldDocument = await this.prisma.documents.findUnique({ where: { id } });
-    const updatedDocument = await this.prisma.documents.update({ where: { id }, data });
+    return this.prisma.$transaction(async (prisma) => {
+      const existingDocument = await this.prisma.documents.findUnique({ where: { id } });
+      if (!existingDocument) {
+        throw new Error('Document not found');
+      }
 
-    // if (oldDocument) {
-    //   await this.proceduresService.triggerAfterUpdate(
-    //     {
-    //       id_company: updatedDocument.id_company,
-    //       request_date: updatedDocument.request_date,
-    //       origin: updatedDocument.origin,
-    //       document_type: updatedDocument.document_type,
-    //       status: updatedDocument.status === 'non_existing' ? 'non-existing' : updatedDocument.status,
-    //     },
-    //     {
-    //       id_company: oldDocument.id_company,
-    //       request_date: oldDocument.request_date,
-    //       origin: oldDocument.origin,
-    //       document_type: oldDocument.document_type,
-    //       status: oldDocument.status === 'non_existing' ? 'non-existing' : oldDocument.status,
-    //     },
-    //   );
-    // }
-    return updatedDocument;
+      const updatedDocument = await this.prisma.documents.update({ where: { id }, data });
+      const updateCompanyConsumption = new UpdateCompanyConsumptionUseCase(prisma);
+      
+      // Verifica se algum dos campos relevantes foi alterado
+      if (
+        data?.origin_id !== existingDocument?.origin_id ||
+        data?.id_company !== existingDocument?.id_company ||
+        data?.status_id !== existingDocument?.status_id
+      ) {
+        // Atualiza o consumo para os valores antigos
+        await updateCompanyConsumption.execute(existingDocument, -1);
+
+        // Atualiza o consumo para os valores novos
+        await updateCompanyConsumption.execute(updatedDocument, 1);
+      }
+
+      return updatedDocument;
+    });
   }
 
   async delete(id: bigint): Promise<Documents> {
-    const document = await this.prisma.documents.findUnique({ where: { id } });
-    if (document) {
-      await this.prisma.documents.delete({ where: { id } });
-      // await this.proceduresService.triggerAfterDelete(
-      //   document.id_company,
-      //   document.request_date,
-      //   document.origin,
-      //   document.document_type,
-      //   document.status === 'non_existing' ? 'non-existing' : document.status,
-      // );
-    }
-    return document!;
+    return this.prisma.$transaction(async (prisma) => {
+      const document = await this.prisma.documents.findUnique({ where: { id } });
+      if (document) {
+        await this.prisma.documents.delete({ where: { id } });
+        const updateCompanyConsumption = new UpdateCompanyConsumptionUseCase(prisma);
+        await updateCompanyConsumption.execute(document, -1); // Decrementa a contagem
+      }
+      return document!;
+    });
   }
-
-  async updateCompanyConsumption(): Promise<void> {
-    const updater = new UpdateCompanyConsumption();
-    await updater.execute(); // Substitui a chamada ao procedimento armazenado
-  }
-
+  
   async isValidRefCode(id: number, entity: string): Promise<boolean> {
     const count = await this.prisma.nsRefCodes.count({
       where: {

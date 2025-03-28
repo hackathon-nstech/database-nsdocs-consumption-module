@@ -10,13 +10,7 @@ RUN npm cache clean --force && npm install
 # Copy application code
 COPY . .
 
-# Generate .env from .env.example with Docker-appropriate values
-RUN cp .env.example .env && \
-    sed -i 's/DB_HOST=localhost/DB_HOST=db/g' .env && \
-    sed -i 's/DB_PORT=3306/DB_PORT=3306/g' .env && \
-    sed -i 's/DATABASE_URL=.*/DATABASE_URL="mysql:\/\/root:@db:3306\/nsdocs_consumption"/g' .env && \
-    cat .env
-
+# Build the application
 RUN npm run build
 
 EXPOSE 3000

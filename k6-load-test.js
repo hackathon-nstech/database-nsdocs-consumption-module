@@ -1,6 +1,10 @@
 import http from 'k6/http';
 import { sleep } from 'k6';
 
+// Get PORT from environment variable with fallback to 3000
+const PORT = __ENV.PORT || '3000';
+const BASE_URL = `http://localhost:${PORT}`;
+
 function getRandomInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
@@ -22,7 +26,7 @@ export const options = {
 };
 
 export default function () {
-  const url = 'http://localhost:3000/documents'; // Replace with your application's URL
+  const url = `${BASE_URL}/documents`; // Replace with your application's URL
 
   // POST request with randomized data
   const payload = JSON.stringify({

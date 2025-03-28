@@ -1,4 +1,4 @@
-version: '3.8'
+version: '3.3'
 
 services:
   db:
@@ -28,6 +28,26 @@ services:
       retries: 10
       interval: 5s
 
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"   # Messaging port
+      - "15672:15672" # Management UI port
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - nsdocs-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
   api:
     build: 
       context: .
@@ -37,6 +57,15 @@ services:
       - DATABASE_URL=mysql://root:@db:3306/nsdocs_consumption
       - PORT=3000
       - NODE_ENV=development
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=
+      - DB_NAME=nsdocs_consumption
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+      - DOCUMENTS_QUEUE=documents_queue
+      - MAX_RECONNECT_ATTEMPTS=5
+      - RECONNECT_DELAY=5000
     ports:
       - "3001:3000"
     volumes:
@@ -44,6 +73,8 @@ services:
       - ./prisma:/usr/src/app/prisma
     depends_on:
       db:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     networks:
       - nsdocs-network
@@ -55,3 +86,4 @@ networks:
 
 volumes:
   db_data:
+  rabbitmq_data:

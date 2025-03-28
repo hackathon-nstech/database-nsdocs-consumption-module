@@ -1,16 +1,19 @@
 import { Controller, Get, Post, Body, Param, Patch, Delete, Logger, BadRequestException } from '@nestjs/common'
 import { DocumentsService } from './documents.service'
 import { Documents } from '@prisma/client'
+import { RabbitmqService } from '../rabbitmq/rabbitmq.service'
 
 @Controller('documents')
 export class DocumentsController {
   private readonly logger = new Logger(DocumentsController.name)
 
-  constructor(private readonly documentsService: DocumentsService) {}
+  constructor(
+    private readonly documentsService: DocumentsService,
+    private readonly rabbitmqService: RabbitmqService,
+  ) {}
 
   async updateConsumption(): Promise<void> {
     this.logger.log('Updating company consumption...')
-    await this.documentsService.updateCompanyConsumption()
     this.logger.log('Company consumption updated successfully.')
   }
 
@@ -72,6 +75,26 @@ export class DocumentsController {
     this.logger.log(`Document created with ID: ${createdDocument.id}`)
 
     return createdDocument
+  }
+
+  @Post('async')
+  async createAsync(@Body() data: Partial<Documents>): Promise<{ success: boolean, message: string }> {
+    this.logger.log('Received request to create a document')
+    this.logger.debug(`Request body: ${JSON.stringify(data)}`)
+
+    try {
+      // You can add validation or transformation of the data here if needed
+      await this.rabbitmqService.publishMessage("document_posted", data);
+      return { 
+        success: true,
+        message: 'Document event sent to message queue successfully'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: `Failed to post document event: ${error && error["message"]}`
+      };
+    }
   }
 
   @Patch(':id')
