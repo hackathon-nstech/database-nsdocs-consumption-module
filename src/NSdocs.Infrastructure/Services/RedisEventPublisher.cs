@@ -64,10 +64,11 @@ public class RedisEventPublisher : IEventPublisher
             }
             else if (docEvent is DocumentDeletedEvent)
             {
+                // Only decrement quantity, total remains unchanged on delete
                 tasks.Add(_redis.StringIncrementAsync($"{currentBaseKey}:quantity", -1));
-                tasks.Add(_redis.StringIncrementAsync($"{currentBaseKey}:total", -1)); // Decrement total on delete
+                // tasks.Add(_redis.StringIncrementAsync($"{currentBaseKey}:total", 0)); // No change to total
                 tasks.Add(_redis.SetAddAsync("agg:pending_flush", currentBaseKey));
-                 _logger.LogInformation("Publishing DELETE deltas (-1, -1) for {BaseKey}", currentBaseKey);
+                 _logger.LogInformation("Publishing DELETE deltas (Quantity: -1, Total: 0) for {BaseKey}", currentBaseKey);
             }
             else if (docEvent is DocumentUpdatedEvent updateEvent)
             {

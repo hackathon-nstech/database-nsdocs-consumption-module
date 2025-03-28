@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("NSdocs.API")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+dcfbc9aa20580e17a7fa7c9e1b678dcf8c5799db")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7800b4b8952b2c04b7d9ebd6a89383dbb2788151")]
 [assembly: System.Reflection.AssemblyProductAttribute("NSdocs.API")]
 [assembly: System.Reflection.AssemblyTitleAttribute("NSdocs.API")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
