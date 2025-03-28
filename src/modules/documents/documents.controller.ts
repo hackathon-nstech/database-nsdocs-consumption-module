@@ -47,9 +47,6 @@ export class DocumentsController {
       origin_id: data.origin_id ?? 0,
       document_type_id: data.document_type_id ?? 0,
       status_id: data.status_id ?? 0,
-      origin: data.origin ?? 'file', // Default value for origin
-      document_type: data.document_type ?? 'nfe', // Default value for document_type
-      status: data.status ?? 'pending', // Default value for status
     }
 
     this.logger.debug(`Validated data: ${JSON.stringify(validData)}`)
