@@ -15,15 +15,15 @@ export class UpdateConsumption {
   ): Promise<void> {
     const updateData: Prisma.ConsumptionUpdateManyMutationInput = {};
 
-    if (documentChanges.origin !== undefined) {
-      updateData.origin = documentChanges.origin;
-    }
-    if (documentChanges.document_type !== undefined) {
-      updateData.document_type = documentChanges.document_type;
-    }
-    if (documentChanges.status !== undefined) {
-      updateData.status = documentChanges.status === 'non-existing' ? 'non_existing' : documentChanges.status;
-    }
+    // if (documentChanges.origin !== undefined) {
+    //   updateData.origin = documentChanges.origin;
+    // }
+    // if (documentChanges.document_type !== undefined) {
+    //   updateData.document_type = documentChanges.document_type;
+    // }
+    // if (documentChanges.status !== undefined) {
+    //   updateData.status = documentChanges.status === 'non-existing' ? 'non_existing' : documentChanges.status;
+    // }
 
     await this.prisma.consumption.updateMany({
       where: {
