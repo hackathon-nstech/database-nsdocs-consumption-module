@@ -12,9 +12,6 @@
 /Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Flusher/bin/Debug/net9.0/NSdocs.Flusher.dll
 /Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Flusher/bin/Debug/net9.0/NSdocs.Flusher.pdb
 /Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Flusher/bin/Debug/net9.0/FluentValidation.dll
-/Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Flusher/bin/Debug/net9.0/MassTransit.dll
-/Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Flusher/bin/Debug/net9.0/MassTransit.Abstractions.dll
-/Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Flusher/bin/Debug/net9.0/MassTransit.RabbitMqTransport.dll
 /Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Flusher/bin/Debug/net9.0/MediatR.dll
 /Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Flusher/bin/Debug/net9.0/MediatR.Contracts.dll
 /Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Flusher/bin/Debug/net9.0/Microsoft.EntityFrameworkCore.dll
@@ -34,8 +31,6 @@
 /Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Flusher/bin/Debug/net9.0/Microsoft.Extensions.DependencyInjection.Abstractions.dll
 /Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Flusher/bin/Debug/net9.0/Microsoft.Extensions.Diagnostics.dll
 /Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Flusher/bin/Debug/net9.0/Microsoft.Extensions.Diagnostics.Abstractions.dll
-/Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Flusher/bin/Debug/net9.0/Microsoft.Extensions.Diagnostics.HealthChecks.dll
-/Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Flusher/bin/Debug/net9.0/Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions.dll
 /Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Flusher/bin/Debug/net9.0/Microsoft.Extensions.FileProviders.Abstractions.dll
 /Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Flusher/bin/Debug/net9.0/Microsoft.Extensions.FileProviders.Physical.dll
 /Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Flusher/bin/Debug/net9.0/Microsoft.Extensions.FileSystemGlobbing.dll
@@ -54,10 +49,8 @@
 /Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Flusher/bin/Debug/net9.0/MySqlConnector.dll
 /Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Flusher/bin/Debug/net9.0/Pipelines.Sockets.Unofficial.dll
 /Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Flusher/bin/Debug/net9.0/Pomelo.EntityFrameworkCore.MySql.dll
-/Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Flusher/bin/Debug/net9.0/RabbitMQ.Client.dll
 /Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Flusher/bin/Debug/net9.0/StackExchange.Redis.dll
 /Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Flusher/bin/Debug/net9.0/System.Diagnostics.EventLog.dll
-/Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Flusher/bin/Debug/net9.0/System.Threading.RateLimiting.dll
 /Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Flusher/bin/Debug/net9.0/runtimes/win/lib/net9.0/System.Diagnostics.EventLog.Messages.dll
 /Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Flusher/bin/Debug/net9.0/runtimes/win/lib/net9.0/System.Diagnostics.EventLog.dll
 /Users/dambros/Development/git/nstech/nsapps/database-nsdocs-consumption-module/src/NSdocs.Flusher/bin/Debug/net9.0/NSdocs.Application.dll

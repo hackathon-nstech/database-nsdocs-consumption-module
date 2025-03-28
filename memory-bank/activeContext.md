@@ -1,94 +1,122 @@
 # Active Context: NSdocs Document Consumption Module
 
 ## Current Focus
-Converting MySQL triggers to Redis-based event aggregation with correct consumption tracking
+Implementing horizontally scalable Redis-based event aggregation with distributed flusher coordination
 
-## Implementation Updates
+## Phase Status
 
-### Phase 1: RabbitMQ Cleanup
-1. **Remove RabbitMQ Dependencies**
-   - Delete NSdocs.Worker project
-   - Remove MassTransit packages from Infrastructure
-   - Remove RabbitMQ service from docker-compose.yml
-   - Clean up RabbitMQ configuration from appsettings.json
+### Phase 1: RabbitMQ Cleanup ✅
+1. **Remove RabbitMQ Dependencies** (Completed)
+   - Deleted NSdocs.Worker project
+   - Removed MassTransit packages from Infrastructure
+   - Removed RabbitMQ service from docker-compose.yml
+   - Cleaned up RabbitMQ configuration from appsettings.json
 
-2. **Code Cleanup**
-   - Remove RabbitMQEventPublisher
-   - Delete RabbitMQ configurations
-   - Update dependency injection configuration
+2. **Code Cleanup** (Completed)
+   - Removed RabbitMQEventPublisher
+   - Deleted RabbitMQ configurations
+   - Updated dependency injection configuration
 
-### Phase 2: Consumption Logic Correction
-1. **Redis Key Structure Update**
+### Phase 2: Redis Implementation Setup
+1. **Redis Key Structure**
 ```
 agg:company:{company_id}:{date}:{origin}:{type}:{status}:quantity
 agg:company:{company_id}:{date}:{origin}:{type}:{status}:total
 ```
 
-2. **Event Publishing Changes**
-   - Track full document context
-   - Partition by request date
-   - Handle status changes correctly
-   - Apply proper total increment rules
-
-3. **Flusher Service Updates**
-   - Group updates by unique key components
-   - Implement correct total field logic
-   - Handle date partitioning
-   - Add database consistency checks
-
-### Phase 3: Data Consistency
-1. **Total Field Logic**
-```sql
-total = total + if(quantity > 0, 1, 0)
+2. **Flusher Coordination Keys**
 ```
-- Only increment total on quantity increases
-- Maintain total on quantity decreases
-- Group by unique key components
-
-2. **Date Partitioning**
-```sql
-WHERE request_date >= consumption_date
-  AND request_date < date_add(consumption_date, interval 1 day)
+flushers                    - Set of active flusher IDs
+flusher:{id}               - Flusher metadata
+flusher:{id}:lock          - Flusher coordination lock
+flusher:{id}:companies     - Companies assigned to flusher
+company:{id}:lock          - Company processing lock
+heartbeat:{flusher_id}     - Flusher heartbeat timestamp
 ```
-- Implement date-based grouping
-- Handle date boundaries correctly
 
-3. **Unique Key Handling**
-```sql
-(id_company, consumption_date, origin, document_type, status)
-```
-- Ensure all components are considered
-- Handle concurrent updates properly
-- Maintain data integrity
+### Phase 3: Implementation Plan
 
-## Action Items
+1. **Lock Management**
+   - Implement RedisLockManager
+   - Add lock acquisition/release
+   - Support lock extension
+   - Handle lock timeouts
 
-1. **Immediate Tasks**
-   - Remove RabbitMQ components
-   - Implement new Redis key structure
-   - Update event publishing logic
+2. **Work Distribution**
+   - Create WorkDistributor
+   - Implement company assignment
+   - Handle work claiming
+   - Support redistribution
 
-2. **Technical Updates**
-   - Enhance Flusher service
-   - Implement date partitioning
-   - Add data consistency checks
+3. **Health Monitoring**
+   - Add HealthMonitor
+   - Implement heartbeat system
+   - Add failure detection
+   - Handle failover
 
-3. **Testing & Validation**
-   - Verify total calculation logic
-   - Test date boundary cases
-   - Validate unique key constraints
+4. **Flusher Updates**
+   - Update FlushWorker implementation
+   - Add coordination support
+   - Implement registration
+   - Add graceful shutdown
+
+5. **Configuration**
+   - Add FlusherOptions
+   - Update dependency injection
+   - Configure Docker support
+   - Set up environment variables
+
+### Technical Considerations
+
+1. **Scalability**
+   - Support multiple flusher instances
+   - Enable dynamic scaling
+   - Handle instance failures
+   - Maintain processing efficiency
+
+2. **Reliability**
+   - Ensure no data loss
+   - Handle network issues
+   - Support instance recovery
+   - Maintain consistency
+
+3. **Performance**
+   - Minimize lock contention
+   - Optimize Redis operations
+   - Efficient work distribution
+   - Quick failure detection
+
+## Next Actions
+
+1. **Implementation Tasks**
+   - Create RedisLockManager class
+   - Implement WorkDistributor
+   - Add HealthMonitor
+   - Update FlushWorker
+   - Add configuration
+
+2. **Testing Requirements**
+   - Unit test lock management
+   - Test work distribution
+   - Verify failover
+   - Validate scaling
+
+3. **Documentation Needs**
+   - Update deployment guides
+   - Document scaling approach
+   - Add monitoring instructions
+   - Include troubleshooting guide
 
 ## Success Criteria
 
-### Technical Validation
-- Accurate consumption tracking
-- Correct total field updates
-- Proper date partitioning
-- Data consistency maintenance
-- Scalable event processing
+### Functional Requirements
+- Successful horizontal scaling
+- Proper work distribution
+- Reliable failover handling
+- Consistent data processing
 
-### Business Requirements
-- Match original trigger logic
-- Maintain data accuracy
-- Support concurrent operations
-- Enable system scalability
+### Non-functional Requirements
+- Sub-100ms processing
+- Zero data loss
+- Automatic recovery
+- Efficient resource usage

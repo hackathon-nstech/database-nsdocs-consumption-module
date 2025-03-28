@@ -1,6 +1,6 @@
 # Progress: NSdocs Document Consumption Module
 
-## Current Status: Replacing MySQL Triggers with Event-Driven Architecture
+## Current Status: Implementing Horizontally Scalable Redis Event Aggregation
 
 ### Completed Items
 1. **Analysis & Planning**
@@ -10,8 +10,8 @@
    - Implementation strategy defined
 
 2. **Technical Decisions**
-   - Event-driven architecture chosen
-   - RabbitMQ integration planned
+   - Switched from RabbitMQ to Redis-based aggregation
+   - Designed distributed flusher coordination
    - CQRS pattern adoption
    - Testing strategy defined
 
@@ -31,161 +31,87 @@
    - Document event classes created
    - Event publishing implemented in command handlers
    - In-memory event publisher implemented
-   - RabbitMQ event publisher placeholder created
 
 6. **Database Migration**
    - Migration script created to drop triggers
    - Stored procedure kept for reference
 
-7. **Worker Service**
-   - Project structure created
-   - MassTransit consumers implemented for each event type
-   - Configuration for RabbitMQ prepared
-
-8. **Docker Setup**
-   - Added RabbitMQ to docker-compose.yml
-   - Configured connection settings in appsettings.json
-   - Set up networking between services
+7. **RabbitMQ Cleanup**
+   - Removed NSdocs.Worker project
+   - Cleaned up RabbitMQ dependencies
+   - Updated configuration files
+   - Removed RabbitMQEventPublisher
 
 ### Next Implementation Phase
-1. **Checkpoint 5: RabbitMQ Integration**
-   - Implement RabbitMQ integration
-   - Complete worker service implementation
-   - Add integration tests for event processing
 
-### Implementation Roadmap
+#### 1. Lock Management
+- [ ] Create RedisLockManager class
+  - [ ] Implement lock acquisition
+  - [ ] Add lock release
+  - [ ] Support lock extension
+  - [ ] Handle timeouts
+  - [ ] Add unit tests
 
-#### Checkpoint 1: API Setup ✅
-- [x] Solution Structure
-  - [x] Create solution file
-  - [x] Add project references
-  - [x] Configure dependencies
-  - Success: Solution builds successfully
+#### 2. Work Distribution
+- [ ] Create WorkDistributor class
+  - [ ] Add company assignment logic
+  - [ ] Implement work claiming
+  - [ ] Add redistribution support
+  - [ ] Handle scaling events
+  - [ ] Test distribution logic
 
-- [x] Domain Models
-  - [x] Document entity
-  - [x] Consumption entity
-  - [x] Enums implementation
-  - Success: Models mirror database schema
+#### 3. Health Monitoring
+- [ ] Implement HealthMonitor
+  - [ ] Add heartbeat system
+  - [ ] Implement failure detection
+  - [ ] Add failover handling
+  - [ ] Test failure scenarios
 
-- [x] Database Setup
-  - [x] EF Core configuration
-  - [x] Entity mappings
-  - [ ] Initial migration
-  - Success: Can connect and query database
+#### 4. Flusher Service
+- [ ] Update FlushWorker
+  - [ ] Add instance registration
+  - [ ] Implement coordination
+  - [ ] Add graceful shutdown
+  - [ ] Update processing logic
+  - [ ] Test scaling scenarios
 
-- [x] CRUD Operations
-  - [x] Create document
-  - [x] Read documents
-  - [x] Update document
-  - [x] Delete document
-  - Success: All CRUD operations working
-
-#### Checkpoint 2: CQRS & Validation ✅
-- [x] MediatR Setup
-  - [x] Commands and queries
-  - [x] Handlers implementation
-  - [ ] Pipeline behaviors
-  - Success: Command/query pattern working
-
-- [x] Validation
-  - [x] FluentValidation rules
-  - [x] Custom validators
-  - [ ] Unit tests
-  - Success: Proper validation in place
-
-#### Checkpoint 3: Event Publishing ✅
-- [x] Event Classes
-  - [x] Base event class
-  - [x] Created event
-  - [x] Updated event
-  - [x] Deleted event
-  - Success: Event classes defined
-
-- [x] Event Publishing
-  - [x] Event publisher interface
-  - [x] In-memory implementation
-  - [x] RabbitMQ placeholder
-  - Success: Events published properly
-
-- [x] Database Migration
-  - [x] Drop triggers script
-  - [x] Migration strategy
-  - Success: Clean migration path
-
-- [x] Worker Service Structure
-  - [x] Project setup
-  - [x] Consumer placeholder
-  - [x] Configuration
-  - Success: Worker service ready for implementation
-
-#### Checkpoint 4: Docker Setup ✅
-- [x] RabbitMQ Container
-  - [x] Added to docker-compose.yml
-  - [x] Configured ports and volumes
-  - [x] Set up networking
-  - Success: RabbitMQ available in container
-
-- [x] Configuration
-  - [x] Updated API appsettings
-  - [x] Updated Worker appsettings
-  - [x] Environment-specific settings
-  - Success: Applications can connect to RabbitMQ
-
-#### Checkpoint 5: RabbitMQ Integration
-- [x] Initial RabbitMQ Setup
-  - [x] Install RabbitMQ.Client package
-  - [x] Configure RabbitMQ options
-  - [x] Set up placeholder publisher
-  - Success: Basic RabbitMQ configuration in place
-
-- [x] Complete RabbitMQ Integration
-  - [x] Implement actual message publishing with MassTransit
-  - [x] Set up message consumers
-  - Success: RabbitMQ properly configured
-
-- [x] Worker Implementation
-  - [x] Event consumers for document events
-  - [x] Consumption update logic
-  - [x] Error handling
-  - Success: Worker processes events correctly
-
-- [ ] Integration Tests
-  - [ ] Event publishing tests
-  - [ ] Event consumption tests
-  - [ ] End-to-end flow tests
-  - Success: Events flow correctly
+#### 5. Configuration & Deployment
+- [ ] Add FlusherOptions
+  - [ ] Configure timeouts
+  - [ ] Set intervals
+  - [ ] Add scaling settings
+- [ ] Update docker-compose.yml
+  - [ ] Add scaling support
+  - [ ] Configure networking
+  - [ ] Set environment variables
 
 ## Testing Progress
 
 ### Unit Tests
-- [ ] Domain model tests
-- [ ] Command/query tests
-- [ ] Validation tests
-- [ ] Repository tests
-Target: 90% coverage
+- [ ] RedisLockManager tests
+- [ ] WorkDistributor tests
+- [ ] HealthMonitor tests
+- [ ] FlushWorker tests
 
 ### Integration Tests
-- [ ] API endpoint tests
-- [ ] Event publishing tests
-- [ ] Database operation tests
-- [ ] Worker service tests
-Target: Key workflows covered
+- [ ] Multi-instance testing
+- [ ] Failover scenarios
+- [ ] Scaling operations
+- [ ] Data consistency checks
 
 ### Performance Tests
-- [ ] API response times
-- [ ] Event processing speed
-- [ ] Database operations
-- [ ] Concurrent processing
-Target: Meet SLA requirements
+- [ ] Lock contention
+- [ ] Work distribution
+- [ ] Failover timing
+- [ ] Scale-out performance
 
 ## Current Progress Overview
 
 ```mermaid
 pie title Implementation Progress
-    "Completed" : 75
-    "In Progress" : 5
-    "Pending" : 20
+    "Completed" : 40
+    "In Progress" : 30
+    "Pending" : 30
 ```
 
 ```mermaid
@@ -196,26 +122,24 @@ pie title Test Coverage
     "Pending" : 100
 ```
 
-## Timeline
+## Implementation Timeline
 ```mermaid
 gantt
     title Implementation Timeline
     dateFormat YYYY-MM-DD
     
-    section Checkpoint 1
-    API Setup :done, 2025-03-27, 2025-03-29
+    section RabbitMQ Cleanup
+    Remove Dependencies :done, 2025-03-27, 2025-03-28
     
-    section Checkpoint 2
-    CQRS & Validation :done, 2025-03-30, 2025-04-02
+    section Redis Setup
+    Lock Management :active, 2025-03-29, 2025-03-31
+    Work Distribution :2025-04-01, 2025-04-03
+    Health Monitoring :2025-04-04, 2025-04-06
     
-    section Checkpoint 3
-    Event Publishing :done, 2025-04-03, 2025-04-09
-    
-    section Checkpoint 4
-    Docker Setup :done, 2025-04-10, 2025-04-12
-    
-    section Checkpoint 5
-    RabbitMQ Integration :active, 2025-04-13, 2025-04-19
+    section Testing
+    Unit Tests :2025-04-07, 2025-04-09
+    Integration Tests :2025-04-10, 2025-04-12
+    Performance Tests :2025-04-13, 2025-04-15
 ```
 
 ## Success Metrics
@@ -227,10 +151,12 @@ gantt
 
 ### Event Processing
 - Processing time < 100ms
-- Queue depth < 1000
-- Zero event loss
+- Redis operation latency < 10ms
+- Zero data loss
+- Sub-second failover
 
 ### Data Consistency
-- No missed updates
-- Accurate consumption
-- Consistent state
+- Accurate consumption tracking
+- Proper total calculations
+- Consistent state across Redis and database
+- No duplicate processing
