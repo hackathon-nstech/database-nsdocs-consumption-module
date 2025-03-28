@@ -15,13 +15,13 @@ model Documents {
   updated_date  DateTime                @default(now()) @updatedAt @db.Timestamp(0)
 
   origin_id     Int?
-  OriginRefCodes    NsRefCodes?       @relation("OriginRelation", fields: [origin_id], references: [id])
+  origin    NsRefCodes?       @relation("OriginRelation", fields: [origin_id], references: [id])
   
   document_type_id Int?
-  documentTypeRefCodes  NsRefCodes?       @relation("DocumentTypeRelation", fields: [document_type_id], references: [id])
+  document_type  NsRefCodes?       @relation("DocumentTypeRelation", fields: [document_type_id], references: [id])
 
   status_id       Int?
-  statusRefCode   NsRefCodes?       @relation("StatusRelation", fields: [status_id], references: [id])
+  status   NsRefCodes?       @relation("StatusRelation", fields: [status_id], references: [id])
 
   @@unique([access_key, id_company], map: "uk_access_key_company")
   @@map("documents")
@@ -35,13 +35,13 @@ model Consumption {
   total            Int                     @default(0)
 
   origin_id         Int?
-  originRefCode     NsRefCodes?       @relation("ConsumptionOriginRelation", fields: [origin_id], references: [id])
+  origin     NsRefCodes?       @relation("ConsumptionOriginRelation", fields: [origin_id], references: [id])
 
   document_type_id  Int?
-  documentTypeRefCode NsRefCodes?     @relation("ConsumptionDocumentTypeRelation", fields: [document_type_id], references: [id])
+  document_type NsRefCodes?     @relation("ConsumptionDocumentTypeRelation", fields: [document_type_id], references: [id])
 
   status_id         Int?
-  statusRefCode     NsRefCodes?       @relation("ConsumptionStatusRelation", fields: [status_id], references: [id])
+  status     NsRefCodes?       @relation("ConsumptionStatusRelation", fields: [status_id], references: [id])
 
   @@unique([id_company, consumption_date, origin_id, document_type_id, status_id], name: "uk_company_type_origin_date_status", map: "uk_company_type_origin_date_status")
   @@map("consumption")
