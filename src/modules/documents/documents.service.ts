@@ -14,11 +14,24 @@ export class DocumentsService {
   ) {}
 
   async findAll(): Promise<Documents[]> {
-    return this.prisma.documents.findMany();
+    return this.prisma.documents.findMany({
+      include: {
+        document_type: true,
+        status: true,
+        origin: true,
+      },
+    });
   }
 
   async findOne(id: bigint): Promise<Documents | null> {
-    return this.prisma.documents.findUnique({ where: { id } });
+    return this.prisma.documents.findUnique({
+      where: { id },
+      include: {
+        document_type: true,
+        status: true,
+        origin: true,
+      },
+    });
   }
 
   async create(data: Omit<Documents, 'id'>): Promise<Documents> {
