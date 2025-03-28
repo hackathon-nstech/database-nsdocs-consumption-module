@@ -62,6 +62,12 @@ export class DocumentsController {
 
     this.logger.debug(`Validated data: ${JSON.stringify(validData)}`)
 
+    // Validate unique key for create
+    const existingDocument = await this.documentsService.findByAccessKeyAndCompany(validData.access_key, validData.id_company);
+    if (existingDocument) {
+      throw new BadRequestException('A document with the same access_key and id_company already exists');
+    }
+
     const createdDocument = await this.documentsService.create(validData)
     this.logger.log(`Document created with ID: ${createdDocument.id}`)
 
@@ -82,6 +88,14 @@ export class DocumentsController {
     }
     if (data.status_id && !(await this.documentsService.isValidRefCode(data.status_id, 'status'))) {
       throw new BadRequestException('Invalid status_id')
+    }
+
+    // Validate unique key for update
+    if (data.access_key && data.id_company) {
+      const existingDocument = await this.documentsService.findByAccessKeyAndCompany(data.access_key, data.id_company);
+      if (existingDocument && existingDocument.id !== BigInt(id)) {
+        throw new BadRequestException('A document with the same access_key and id_company already exists');
+      }
     }
 
     if (data?.id) {

@@ -100,4 +100,13 @@ export class DocumentsService {
     });
     return count > 0;
   }
+
+  async findByAccessKeyAndCompany(accessKey: string, idCompany: number): Promise<Documents | null> {
+    return this.prisma.documents.findFirst({
+      where: {
+        access_key: accessKey,
+        id_company: idCompany,
+      },
+    });
+  }
 }
