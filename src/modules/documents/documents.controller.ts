@@ -84,6 +84,9 @@ export class DocumentsController {
       throw new BadRequestException('Invalid status_id')
     }
 
+    if (data?.id) {
+      delete data.id // Remove id from the update data
+    }
     const updatedDocument = await this.documentsService.update(BigInt(id), data)
     this.logger.log(`Document with ID: ${id} updated successfully`)
     return updatedDocument
