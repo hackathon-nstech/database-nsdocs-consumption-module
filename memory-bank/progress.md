@@ -42,52 +42,54 @@
    - Updated configuration files
    - Removed RabbitMQEventPublisher
 
-### Next Implementation Phase
+### Completed Implementation Phase: Redis Coordination
 
-#### 1. Lock Management
-- [ ] Create RedisLockManager class
-  - [ ] Implement lock acquisition
-  - [ ] Add lock release
-  - [ ] Support lock extension
-  - [ ] Handle timeouts
-  - [ ] Add unit tests
+#### 1. Lock Management ✅
+- [x] Create RedisLockManager class
+  - [x] Implement lock acquisition (SET NX PX)
+  - [x] Add lock release (Lua script)
+  - [x] Support lock extension (Lua script)
+  - [x] Handle timeouts (via TTL)
+  - [ ] Add unit tests (Pending)
 
-#### 2. Work Distribution
-- [ ] Create WorkDistributor class
-  - [ ] Add company assignment logic
-  - [ ] Implement work claiming
-  - [ ] Add redistribution support
-  - [ ] Handle scaling events
-  - [ ] Test distribution logic
+#### 2. Work Distribution ✅
+- [x] Create WorkDistributor class
+  - [x] Add company assignment logic (Consistent Hashing/Modulo)
+  - [x] Implement work claiming (via GetAssignedWorkAsync)
+  - [x] Add redistribution support (Trigger + Cleanup)
+  - [x] Handle scaling events (Implicit via instance list changes)
+  - [ ] Test distribution logic (Pending)
 
-#### 3. Health Monitoring
-- [ ] Implement HealthMonitor
-  - [ ] Add heartbeat system
-  - [ ] Implement failure detection
-  - [ ] Add failover handling
-  - [ ] Test failure scenarios
+#### 3. Health Monitoring ✅
+- [x] Implement HealthMonitor
+  - [x] Add heartbeat system (Sorted Set score update)
+  - [x] Implement failure detection (Score expiry check)
+  - [x] Add failover handling (Trigger redistribution)
+  - [x] Create HealthMonitorService (IHostedService wrapper)
+  - [ ] Test failure scenarios (Pending)
 
-#### 4. Flusher Service
-- [ ] Update FlushWorker
-  - [ ] Add instance registration
-  - [ ] Implement coordination
-  - [ ] Add graceful shutdown
-  - [ ] Update processing logic
-  - [ ] Test scaling scenarios
+#### 4. Flusher Service ✅
+- [x] Update FlushWorker
+  - [x] Add instance registration (via WorkDistributor)
+  - [x] Implement coordination (Get assigned work, lock companies)
+  - [x] Add graceful shutdown (Release work)
+  - [x] Update processing logic (Loop assigned work, use locks)
+  - [ ] Test scaling scenarios (Pending)
 
-#### 5. Configuration & Deployment
-- [ ] Add FlusherOptions
-  - [ ] Configure timeouts
-  - [ ] Set intervals
-  - [ ] Add scaling settings
-- [ ] Update docker-compose.yml
-  - [ ] Add scaling support
-  - [ ] Configure networking
-  - [ ] Set environment variables
+#### 5. Configuration & Deployment ✅
+- [x] Add FlusherSettings (appsettings.json)
+  - [x] Configure intervals (Heartbeat, Expiry)
+- [x] Update DI Registration (Read config, InstanceId logic)
+- [x] Update docker-compose.yml
+  - [x] Add scaling support (`deploy.replicas`)
+  - [x] Pass HOSTNAME environment variable
+- [x] Create Flusher Dockerfile
+
+### Next Phase: Testing & Refinement
 
 ## Testing Progress
 
-### Unit Tests
+### Unit Tests (Pending)
 - [ ] RedisLockManager tests
 - [ ] WorkDistributor tests
 - [ ] HealthMonitor tests
@@ -109,13 +111,12 @@
 
 ```mermaid
 pie title Implementation Progress
-    "Completed" : 40
-    "In Progress" : 30
-    "Pending" : 30
+    "Completed" : 75
+    "Testing Pending" : 25
 ```
 
 ```mermaid
-pie title Test Coverage
+pie title Test Coverage (Pending)
     "Unit Tests" : 0
     "Integration Tests" : 0
     "Performance Tests" : 0
@@ -125,20 +126,22 @@ pie title Test Coverage
 ## Implementation Timeline
 ```mermaid
 gantt
-    title Implementation Timeline
+    title Implementation Timeline (Updated)
     dateFormat YYYY-MM-DD
     
     section RabbitMQ Cleanup
-    Remove Dependencies :done, 2025-03-27, 2025-03-28
+    Remove Dependencies :done, 2025-03-27, 1d
     
-    section Redis Setup
-    Lock Management :active, 2025-03-29, 2025-03-31
-    Work Distribution :2025-04-01, 2025-04-03
-    Health Monitoring :2025-04-04, 2025-04-06
+    section Redis Coordination Implementation
+    Lock Management :done, 2025-03-28, 1d 
+    Work Distribution :done, 2025-03-28, 1d
+    Health Monitoring :done, 2025-03-28, 1d
+    Flusher Integration :done, 2025-03-28, 1d
+    Config & Deployment :done, 2025-03-28, 1d
     
-    section Testing
-    Unit Tests :2025-04-07, 2025-04-09
-    Integration Tests :2025-04-10, 2025-04-12
+    section Testing (Next)
+    Unit Tests :crit, active, 2025-03-29, 3d
+    Integration Tests :2025-04-01, 3d
     Performance Tests :2025-04-13, 2025-04-15
 ```
 

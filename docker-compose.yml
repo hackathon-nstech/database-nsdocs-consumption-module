@@ -39,22 +39,25 @@ services:
     networks:
       - nsdocs_network
 
-  # flusher:
-  #   build:
-  #     context: .
-  #     dockerfile: src/NSdocs.Flusher/Dockerfile
-  #   container_name: nsdocs_flusher
-  #   depends_on:
-  #     db:
-  #       condition: service_started
-  #     redis:
-  #       condition: service_healthy
-  #   environment:
-  #     - DOTNET_ENVIRONMENT=Development
-  #     - ConnectionStrings__DefaultConnection=Server=db;Port=3306;Database=nsdocs_consumption;User=root;Password=;
-  #     - Redis__ConnectionString=redis:6379
-  #   networks:
-  #     - nsdocs_network
+  flusher:
+    build:
+      context: .
+      dockerfile: src/NSdocs.Flusher/Dockerfile
+    # container_name: nsdocs_flusher # Cannot set container_name when scaling
+    deploy:
+      replicas: 2 # Example: Start with 2 replicas
+    depends_on:
+      db:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    environment:
+      - DOTNET_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Server=db;Port=3306;Database=nsdocs_consumption;User=root;Password=;
+      - Redis__ConnectionString=redis:6379
+      - HOSTNAME # Pass HOSTNAME from the container environment to be used as InstanceId
+    networks:
+      - nsdocs_network
 
 volumes:
   db_data:

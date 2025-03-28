@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("NSdocs.Flusher")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+961cca79ed4023ef488074a1ed06b79f148b946c")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+af9cf7539eb1e0a9a1fae0a86bf080418c2740b7")]
 [assembly: System.Reflection.AssemblyProductAttribute("NSdocs.Flusher")]
 [assembly: System.Reflection.AssemblyTitleAttribute("NSdocs.Flusher")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
