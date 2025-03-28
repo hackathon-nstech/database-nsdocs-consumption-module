@@ -129,6 +129,38 @@ export class DocumentsController {
     return updatedDocument
   }
 
+  @Patch('async/:id')
+  async updateAsync(@Param('id') id: string, @Body() data: Partial<Documents>): Promise<Documents> {
+    this.logger.log(`Updating document with ID: ${id}`)
+    this.logger.debug(`Update data: ${JSON.stringify(data)}`)
+
+    // Validate IDs
+    if (data.origin_id && !(await this.documentsService.isValidRefCode(data.origin_id, 'origin'))) {
+      throw new BadRequestException('Invalid origin_id')
+    }
+    if (data.document_type_id && !(await this.documentsService.isValidRefCode(data.document_type_id, 'document_type'))) {
+      throw new BadRequestException('Invalid document_type_id')
+    }
+    if (data.status_id && !(await this.documentsService.isValidRefCode(data.status_id, 'status'))) {
+      throw new BadRequestException('Invalid status_id')
+    }
+
+    // Validate unique key for update
+    if (data.access_key && data.id_company) {
+      const existingDocument = await this.documentsService.findByAccessKeyAndCompany(data.access_key, data.id_company);
+      if (existingDocument && existingDocument.id !== BigInt(id)) {
+        throw new BadRequestException('A document with the same access_key and id_company already exists');
+      }
+    }
+
+    if (data?.id) {
+      delete data.id // Remove id from the update data
+    }
+    const updatedDocument = await this.documentsService.update(BigInt(id), data)
+    this.logger.log(`Document with ID: ${id} updated successfully`)
+    return updatedDocument
+  }
+
   @Delete(':id')
   async delete(@Param('id') id: string): Promise<Documents> {
     this.logger.log(`Deleting document with ID: ${id}`)
