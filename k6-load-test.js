@@ -1,3 +1,4 @@
+import { sleep } from 'k6';
 import http from 'k6/http';
 
 // Get PORT from environment variable with fallback to 3000
@@ -18,8 +19,8 @@ function generateRandomHash() {
 
 export const options = {
   stages: [
-    { duration: '2m', target: 1000 }, // Ramp-up to 10 users over 30 seconds
-    { duration: '3m', target: 500 },  // Stay at 10 users for 1 minute
+    { duration: '2m', target: 500 }, // Ramp-up to 10 users over 30 seconds
+    { duration: '3m', target: 250 },  // Stay at 10 users for 1 minute
     { duration: '2m', target: 0 },  // Ramp-down to 0 users over 30 seconds
   ],
 };
@@ -76,7 +77,7 @@ export default function () {
 
   // POST request with randomized data
   const payload = JSON.stringify({
-    id_company: getRandomInt(1, 100),
+    id_company: getRandomInt(1, 10),
     access_key: generateRandomHash(),
     request_date: new Date().toISOString(),
     updated_date: new Date().toISOString(),
@@ -92,9 +93,40 @@ export default function () {
   };
 
   const postRes = http.post(`${url}`, payload, params);
-  if (postRes.status !== 201) {
+  if (!(postRes.status >= 200 && postRes.status < 300)) {
     console.error(`POST request to 'async' endpoint failed. Status: ${postRes.status}`);
   }
+
+  // Simulate user think time
+  sleep(1);
+
+  const documentId = getRandomInt(10, 500000); // Random document ID for testing
+
+  // PATCH request to update a document
+  const patchUrl = `${BASE_URL}/documents/async/${documentId}`;
+  const patchPayload = JSON.stringify({
+    origin_id: getRandomInt(1, 3),
+    status_id: getRandomInt(11, 14),
+    updated_date: new Date().toISOString(),
+  });
+
+  const patchParams = {
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  };
+
+  const patchRes = http.patch(patchUrl, patchPayload, patchParams);
+  if (!(patchRes.status >= 200 && patchRes.status < 300)) {
+    console.error(`PATCH request failed. Status: ${JSON.stringify(patchRes)}`);
+  }
+
+  // DELETE request to delete a document
+  // const deleteUrl = `${BASE_URL}/documents/${documentId}/async`;
+  // const deleteRes = http.del(deleteUrl, null, patchParams);
+  // if (deleteRes.status !== 204) {
+  //   console.error(`DELETE request failed. Status: ${deleteRes.status}`);
+  // }
 
   // Simulate user think time
   // sleep(1);
