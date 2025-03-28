@@ -13,9 +13,6 @@ model Documents {
   access_key    String                  @db.VarChar(44)
   request_date  DateTime                @default(now()) @db.Timestamp(0)
   updated_date  DateTime                @default(now()) @updatedAt @db.Timestamp(0)
-  origin        documents_origin
-  document_type documents_document_type
-  status        DocumentStatus
 
   origin_id     Int?
   OriginRefCodes    NsRefCodes?       @relation("OriginRelation", fields: [origin_id], references: [id])
@@ -34,9 +31,6 @@ model Consumption {
   id               Int                     @id @default(autoincrement())
   id_company       Int
   consumption_date DateTime                @db.Date
-  origin           ConsumptionOrigin
-  document_type    ConsumptionDocumentType
-  status           ConsumptionStatus
   quantity         Int                     @default(0)
   total            Int                     @default(0)
 
@@ -49,7 +43,7 @@ model Consumption {
   status_id         Int?
   statusRefCode     NsRefCodes?       @relation("ConsumptionStatusRelation", fields: [status_id], references: [id])
 
-  @@unique([id_company, consumption_date, origin, document_type, status], name: "uk_company_type_origin_date_status", map: "uk_company_type_origin_date_status")
+  @@unique([id_company, consumption_date, origin_id, document_type_id, status_id], name: "uk_company_type_origin_date_status", map: "uk_company_type_origin_date_status")
   @@map("consumption")
 }
 
@@ -73,50 +67,4 @@ model NsRefCodes {
   ConsumptionOriginRelation Consumption[] @relation("ConsumptionOriginRelation")
   ConsumptionDocumentTypeRelation Consumption[] @relation("ConsumptionDocumentTypeRelation")
   ConsumptionStatusRelation Consumption[] @relation("ConsumptionStatusRelation")
-}
-
-enum ConsumptionOrigin {
-  file
-  email
-  ws
-}
-
-enum ConsumptionDocumentType {
-  cfe
-  cte
-  cteos
-  mdfe
-  nfce
-  nfe
-  nfse
-}
-
-enum ConsumptionStatus {
-  ok
-  pending
-  error
-  non_existing @map("non-existing")
-}
-
-enum DocumentStatus {
-  ok
-  pending
-  error
-  non_existing @map("non-existing")
-}
-
-enum documents_origin {
-  file
-  email
-  ws
-}
-
-enum documents_document_type {
-  cfe
-  cte
-  cteos
-  mdfe
-  nfce
-  nfe
-  nfse
 }
