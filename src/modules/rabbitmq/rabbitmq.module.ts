@@ -1,8 +1,6 @@
 import { Module } from '@nestjs/common';
 import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 import { RabbitmqService } from './rabbitmq.service';
-import { DatabaseDocumentsService } from 'src/infra/prisma/database-documents.service';
-import { ProceduresModule } from '../procedures/procedures.module';
 
 @Module({
   imports: [
@@ -16,7 +14,6 @@ import { ProceduresModule } from '../procedures/procedures.module';
       uri: 'amqp://localhost', // RabbitMQ connection URI
       connectionInitOptions: { wait: false },
     }),
-    ProceduresModule
   ],
   providers: [RabbitmqService],
   exports: [RabbitmqService],
