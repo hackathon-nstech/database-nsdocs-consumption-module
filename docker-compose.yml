@@ -59,6 +59,49 @@ services:
     networks:
       - nsdocs_network
 
+  api:
+    build:
+      context: .
+      dockerfile: src/NSdocs.API/Dockerfile
+    # container_name: nsdocs_api # Cannot set container_name when scaling
+    deploy:
+      replicas: 2 # Start with 2 replicas
+    depends_on:
+      db:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    environment:
+      - DOTNET_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080 # Ensure the app listens on the exposed port
+      - ConnectionStrings__DefaultConnection=Server=db;Port=3306;Database=nsdocs_consumption;User=root;Password=;
+      - Redis__ConnectionString=redis:6379
+      # Add any other necessary environment variables for the API
+    # ports:
+      # We don't map a fixed host port because we have multiple replicas.
+      # A load balancer (like Nginx, Traefik, or HAProxy) would typically sit in front
+      # and distribute traffic to the replicas on port 8080.
+      # For direct testing without a load balancer, you could temporarily map ports like:
+      # - "5030:8080"
+      # - "5031:8080"
+      # But this requires managing ports manually and isn't ideal for scaling.
+      # Port 8080 is exposed internally by the Dockerfile EXPOSE instruction
+      # No need to list it here explicitly unless mapping to host.
+    networks:
+      - nsdocs_network
+
+  nginx:
+    image: nginx:alpine
+    container_name: nsdocs_lb
+    ports:
+      - "5030:80" # Map host port 5030 to Nginx container port 80
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro # Mount custom Nginx config read-only
+    depends_on:
+      - api # Wait for API service to be started (doesn't guarantee readiness)
+    networks:
+      - nsdocs_network
+
 volumes:
   db_data:
   redis_data:
