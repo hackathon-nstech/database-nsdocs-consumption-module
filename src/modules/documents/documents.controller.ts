@@ -10,7 +10,6 @@ export class DocumentsController {
 
   async updateConsumption(): Promise<void> {
     this.logger.log('Updating company consumption...')
-    await this.documentsService.updateCompanyConsumption()
     this.logger.log('Company consumption updated successfully.')
   }
 
